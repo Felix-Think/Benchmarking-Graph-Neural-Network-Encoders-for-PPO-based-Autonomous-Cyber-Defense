@@ -147,7 +147,7 @@ wheels = [
 [[package]]
 name = "benchmarking-graph-neural-network-encoders-for-ppo-based-autonomous-cyber-defense-under-partial-observability"
 version = "0.1.0"
-source = { virtual = "." }
+source = { editable = "." }
 dependencies = [
     { name = "bcrypt" },
     { name = "cryptography" },

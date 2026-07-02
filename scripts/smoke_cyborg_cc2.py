@@ -1,21 +1,15 @@
 import argparse
-import inspect
 
-from CybORG import CybORG
-from CybORG.Agents import BlueReactRemoveAgent, RedMeanderAgent
-from CybORG.Simulator.Scenarios import FileReaderScenarioGenerator
+from _bootstrap import ensure_src_on_path
 
+ensure_src_on_path()
 
-def build_cyborg_cc2():
-    cyborg_dir = inspect.getfile(CybORG)[:-7]
-    scenario_path = f"{cyborg_dir}/Simulator/Scenarios/scenario_files/Scenario2.yaml"
-    scenario_generator = FileReaderScenarioGenerator(scenario_path)
-    red_agent = RedMeanderAgent()
-    return CybORG(scenario_generator, "sim", agents={"Red": red_agent})
+from acd_benchmark.cyber.env_factory import make_cc2_env
+from CybORG.Agents import BlueReactRemoveAgent
 
 
 def run_episode(steps: int) -> None:
-    cyborg = build_cyborg_cc2()
+    cyborg = make_cc2_env()
     blue_agent = BlueReactRemoveAgent()
 
     results = cyborg.reset("Blue")

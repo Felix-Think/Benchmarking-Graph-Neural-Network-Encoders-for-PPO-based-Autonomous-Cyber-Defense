@@ -6,7 +6,15 @@ dist/
 wheels/
 *.egg-info
 .DS_Store
+.pytest_cache/
 
 # Virtual environments
 .venv
 .uv-cache/
+
+# Experiment outputs
+runs/*
+!runs/.gitkeep
+artifacts/
+checkpoints/
+logs/

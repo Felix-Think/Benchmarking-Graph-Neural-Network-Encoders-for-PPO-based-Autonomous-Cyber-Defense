@@ -1,0 +1,6 @@
+name: ppo_gat
+encoder: gat
+hidden_dim: 128
+num_layers: 2
+heads: 2
+pooling: mean

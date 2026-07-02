@@ -1,0 +1,5 @@
+name: ppo_graphsage
+encoder: graphsage
+hidden_dim: 128
+num_layers: 2
+pooling: mean

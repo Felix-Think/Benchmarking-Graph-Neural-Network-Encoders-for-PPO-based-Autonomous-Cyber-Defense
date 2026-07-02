@@ -46,3 +46,13 @@ dev = [
 
 [tool.uv.sources]
 cyborg = { path = "CybORG", editable = true }
+
+[build-system]
+requires = ["setuptools==82.0.1"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]

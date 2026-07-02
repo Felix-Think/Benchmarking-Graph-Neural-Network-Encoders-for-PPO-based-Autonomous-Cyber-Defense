@@ -1,0 +1,4 @@
+name: full
+observed_dynamic_host_ratio: 1.0
+mask_static_topology: false
+include_mask_bits: true

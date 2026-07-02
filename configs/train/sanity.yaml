@@ -1,0 +1,8 @@
+name: sanity
+env_config: configs/env/cc2.yaml
+obs_config: configs/obs/full.yaml
+model_config: configs/model/ppo_flat.yaml
+seed: 0
+total_steps: 100000
+eval_episodes: 5
+log_dir: runs/sanity

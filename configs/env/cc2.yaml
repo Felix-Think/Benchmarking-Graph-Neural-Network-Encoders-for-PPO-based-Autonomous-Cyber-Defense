@@ -1,0 +1,7 @@
+name: cc2
+backend: cyborg
+scenario: Scenario2.yaml
+blue_agent: Blue
+red_agent: RedMeanderAgent
+max_steps: 100
+render: false
