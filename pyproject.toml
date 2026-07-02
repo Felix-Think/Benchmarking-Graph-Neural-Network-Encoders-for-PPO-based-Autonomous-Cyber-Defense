@@ -1,0 +1,48 @@
+[project]
+name = "benchmarking-graph-neural-network-encoders-for-ppo-based-autonomous-cyber-defense-under-partial-observability"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10, <3.11"
+dependencies = [
+    "cyborg",
+    "bcrypt==5.0.0",
+    "cryptography==48.0.0",
+    "docutils==0.20.1",
+    "gym==0.23.1",
+    "gymnasium==0.29.1",
+    "matplotlib==3.8.4",
+    "networkx==3.4.2",
+    "numpy==1.23.5",
+    "pandas==2.0.3",
+    "paramiko==5.0.0",
+    "pettingzoo==1.24.3",
+    "prettytable==3.10.0",
+    "psutil==5.9.8",
+    "pygame==2.5.2",
+    "pynacl==1.6.2",
+    "pyyaml==6.0.3",
+    "rich==13.7.1",
+    "scipy==1.10.1",
+    "setuptools==82.0.1",
+    "tensorboard==2.16.2",
+    "torch==2.3.1",
+    "torch-geometric==2.5.3",
+    "tqdm==4.66.4",
+]
+
+[project.optional-dependencies]
+sb3 = [
+    "shimmy[gym-v21]==1.3.0",
+    "stable-baselines3==2.3.2",
+]
+
+[dependency-groups]
+dev = [
+    "ipykernel==6.29.5",
+    "pytest==8.2.2",
+    "ruff==0.5.5",
+]
+
+[tool.uv.sources]
+cyborg = { path = "CybORG", editable = true }
