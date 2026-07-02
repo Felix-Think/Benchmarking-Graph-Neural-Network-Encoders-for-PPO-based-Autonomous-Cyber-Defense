@@ -376,31 +376,35 @@ wheels = [
 
 [[package]]
 name = "cyborg"
-version = "0.1.0"
+version = "3.1"
 source = { editable = "CybORG" }
 dependencies = [
-    { name = "bcrypt" },
-    { name = "cryptography" },
+    { name = "docutils" },
     { name = "gym" },
+    { name = "matplotlib" },
     { name = "networkx" },
     { name = "numpy" },
     { name = "paramiko" },
-    { name = "pynacl" },
+    { name = "pettingzoo" },
+    { name = "prettytable" },
+    { name = "pygame" },
+    { name = "pytest" },
     { name = "pyyaml" },
-    { name = "setuptools" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "bcrypt", specifier = ">=5.0.0" },
-    { name = "cryptography", specifier = ">=48.0.0" },
+    { name = "docutils" },
     { name = "gym", specifier = "==0.23.1" },
-    { name = "networkx", specifier = ">=3.0" },
-    { name = "numpy", specifier = "==1.23.5" },
-    { name = "paramiko", specifier = ">=5.0.0" },
-    { name = "pynacl", specifier = ">=1.6.2" },
-    { name = "pyyaml", specifier = ">=6.0.3" },
-    { name = "setuptools", specifier = ">=82.0.1" },
+    { name = "matplotlib" },
+    { name = "networkx" },
+    { name = "numpy" },
+    { name = "paramiko" },
+    { name = "pettingzoo" },
+    { name = "prettytable" },
+    { name = "pygame" },
+    { name = "pytest" },
+    { name = "pyyaml" },
 ]
 
 [[package]]
