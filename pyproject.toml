@@ -1,7 +1,7 @@
 [project]
 name = "benchmarking-graph-neural-network-encoders-for-ppo-based-autonomous-cyber-defense-under-partial-observability"
 version = "0.1.0"
-description = "Add your description here"
+description = "Matched flat and graph PPO encoder benchmarks for autonomous cyber defense in CybORG"
 readme = "README.md"
 requires-python = ">=3.10, <3.11"
 dependencies = [
@@ -31,12 +31,6 @@ dependencies = [
     "tqdm==4.66.4",
 ]
 
-[project.optional-dependencies]
-sb3 = [
-    "shimmy[gym-v21]==1.3.0",
-    "stable-baselines3==2.3.2",
-]
-
 [dependency-groups]
 dev = [
     "ipykernel==6.29.5",
@@ -55,4 +49,4 @@ build-backend = "setuptools.build_meta"
 where = ["src"]
 
 [tool.pytest.ini_options]
-pythonpath = ["src"]
+pythonpath = ["src", "."]

@@ -1,0 +1,67 @@
+protocol: main_benchmark_16_v1
+scenario:
+  path: configs/scenarios/cage2_16.yaml
+  node_count: 16
+  red_agent: Meander
+  max_episode_steps: 100
+matrix:
+  models:
+    - flat
+    - gcn
+    - graphsage
+  observation_levels:
+    - 100
+    - 25
+  seeds:
+    - 0
+    - 1
+    - 2
+    - 3
+    - 4
+training:
+  total_timesteps: 1000000
+  evaluation_frequency: 100000
+  evaluation_episodes: 30
+  evaluation_base_seed: 100
+  final_evaluation_episodes: 100
+  final_evaluation_base_seed: 10000
+  num_envs: 8
+  rollout_steps_per_env: 256
+  batch_size: 256
+  ppo_epochs: 10
+  learning_rate: 0.0003
+  gamma: 0.99
+  gae_lambda: 0.95
+  ppo_clip: 0.2
+  entropy_coef: 0.01
+  value_coef: 0.5
+  max_grad_norm: 0.5
+model:
+  hidden_dim: 64
+  hidden_dim_by_model:
+    flat: 102
+    gcn: 64
+    graphsage: 64
+  graph_layers: 2
+observation:
+  masking: iid_bernoulli_per_host_per_timestep
+  dynamic_fill_value: 0.0
+  action_feedback_observations: 2
+  static_features:
+    - role
+    - subnet
+    - criticality
+  dynamic_features:
+    - activity.is_scan
+    - activity.is_exploit
+    - compromised.is_unknown
+    - compromised.is_user
+    - compromised.is_privileged
+  visibility_feature: visibility.host_visible
+  topology_masked: false
+baselines:
+  required: true
+compute:
+  device: cpu
+  torch_threads: 1
+output_root: runs/main_benchmark_16_v1

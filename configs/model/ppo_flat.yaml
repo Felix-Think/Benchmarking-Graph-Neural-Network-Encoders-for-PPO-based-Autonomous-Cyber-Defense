@@ -1,4 +1,0 @@
-name: ppo_flat
-encoder: flat_mlp
-hidden_dim: 128
-num_layers: 2

@@ -1,5 +1,0 @@
-name: ppo_gcn
-encoder: gcn
-hidden_dim: 128
-num_layers: 2
-pooling: mean

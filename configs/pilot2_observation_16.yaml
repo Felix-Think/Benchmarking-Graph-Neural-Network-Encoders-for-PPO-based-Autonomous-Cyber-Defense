@@ -1,0 +1,111 @@
+protocol: pilot2_observation_qualification_16_v2
+scope:
+  primary: observation_retention_qualification
+  topology_generalisation: blocked_until_simulator_coupling_audit
+scenario:
+  path: configs/scenarios/cage2_16.yaml
+  node_count: 16
+  red_agent: Meander
+  max_episode_steps: 100
+matrix:
+  models:
+    - flat
+    - graphsage
+  observation_levels:
+    - mixed
+  seeds:
+    - 0
+    - 1
+    - 2
+training:
+  total_timesteps: 1000000
+  evaluation_frequency: 100000
+  evaluation_episodes: 20
+  evaluation_base_seed: 3100
+  final_evaluation_episodes: 100
+  final_evaluation_base_seed: 9100
+  num_envs: 8
+  rollout_steps_per_env: 256
+  batch_size: 256
+  ppo_epochs: 10
+  learning_rate: 0.0003
+  gamma: 0.99
+  gae_lambda: 0.95
+  ppo_clip: 0.2
+  entropy_coef: 0.01
+  value_coef: 0.5
+  max_grad_norm: 0.5
+model:
+  hidden_dim: 64
+  graph_layers: 2
+observation:
+  masking: fixed_budget_stratified_per_host_per_timestep
+  q_values:
+    - 1.0
+    - 0.75
+    - 0.5
+    - 0.25
+  q_sampling: uniform_per_episode
+  q_denominator: known_actionable_non_router_host_slots
+  global_budget_rounding: round_half_up
+  subnet_quota_allocator: largest_remainder
+  subnet_quota_tie_break: seeded_and_frozen_per_episode
+  sampling_within_subnet: without_replacement_per_timestep
+  dynamic_fill_value: 0.0
+  force_target_visible: false
+  retain_static_features: true
+  topology_masked: false
+  flat_include_adjacency: false
+  learned_normalizer: none
+action:
+  validity_mask: none
+  invalid_action_handling: native_cyborg_result
+  policy_observes_result: false
+  shared_belief_update: selected_action_without_result
+  log_action_success: true
+evaluation:
+  retention_levels:
+    - 1.0
+    - 0.75
+    - 0.5
+    - 0.25
+  paired_environment_seeds: true
+  primary_metric: mission_availability
+  secondary_metrics:
+    - episode_return
+    - mean_privileged_compromised_hosts
+  diagnostic_metrics:
+    - mean_red_presence_hosts
+    - detection_latency_with_censoring
+    - recovery_latency_with_censoring
+    - action_success_rate_among_known
+    - inference_latency
+    - training_throughput
+  q025_role: stress_floor_not_hard_trainability_gate
+generalisation:
+  main_track: held_out_same_scale_structural_topology
+  status: blocked_until_graph_and_simulator_reachability_are_coupled
+  process_shift_track: deferred_until_primary_observation_gate_passes
+  cross_scale_track: exploratory_after_node_conditioned_action_head
+qualification:
+  hard_integrity_checks:
+    - exact_fixed_budget_at_every_logged_timestep
+    - realized_mixed_q_episode_and_timestep_exposure_logged
+    - no_target_visibility_leakage
+    - action_result_excluded_symmetrically_from_policy_input
+    - no_learned_normalizer_in_pilot2a
+    - paired_fixed_q_evaluation_seeds
+    - finite_training_metrics
+    - complete_checkpoints_and_reports
+  scientific_review:
+    required:
+      - q100_learning_against_non_learning_baselines
+      - q050_learning_against_non_learning_baselines
+      - reward_availability_compromise_consistency_review
+    descriptive_only:
+      - q025_trainability
+      - raw_retention_curve_auc
+compute:
+  device: cpu
+  torch_threads: 1
+output_root: runs/pilot2_observation_16

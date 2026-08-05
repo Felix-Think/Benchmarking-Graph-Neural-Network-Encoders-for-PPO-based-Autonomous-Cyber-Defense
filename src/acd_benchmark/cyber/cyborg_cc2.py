@@ -5,7 +5,7 @@ from acd_benchmark.cyber.import_path import ensure_cyborg_on_path
 
 ensure_cyborg_on_path()
 
-from CybORG import CybORG
+from CybORG import CybORG  # noqa: E402
 
 
 def get_cyborg_package_dir() -> Path:

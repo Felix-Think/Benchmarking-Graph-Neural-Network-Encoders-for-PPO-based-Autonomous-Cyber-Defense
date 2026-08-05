@@ -1,1 +1,1 @@
-"""Shared utility helpers."""
+"""Reproducibility and runtime utilities."""

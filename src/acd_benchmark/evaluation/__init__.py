@@ -1,1 +1,1 @@
-"""Evaluation metrics and benchmark evaluators."""
+"""Evaluation-only cyber-resilience metrics and policy evaluation."""
