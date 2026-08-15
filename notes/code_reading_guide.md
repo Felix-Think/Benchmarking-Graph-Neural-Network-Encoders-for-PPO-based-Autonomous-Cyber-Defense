@@ -1,116 +1,72 @@
-# Huong Dan Doc Code
+# Huong Dan Doc Code Pilot
 
-Tai lieu nay chi ra duong code dang duoc protocol cuoi su dung. Doc theo thu tu
-duoi day se tranh bi lan vao source snapshot trong `runs/` hoac code CybORG
-upstream qua som.
+Trang thai: `configs/pilot.yaml` la protocol active duy nhat.
 
 ## 1. Cau Noi Vao CybORG
 
 1. `src/acd_benchmark/cyber/import_path.py`
 2. `src/acd_benchmark/cyber/cyborg_cc2.py`
 3. `src/acd_benchmark/cyber/env_factory.py`
-4. `src/acd_benchmark/cyber/action_space.py`
 
-Sau buoc nay can tra loi duoc: scenario nao duoc tao, Red agent nao duoc dung,
-va integer action cua policy duoc doi thanh CybORG action nhu the nao.
+Ba file nay cho biet CybORG local duoc import o dau, Scenario2 nam o dau va
+official CAGE-2 duoc khoi tao nhu the nao.
 
-## 2. Encoder Raw Blue
+## 2. Kiem Tra Environment
 
-Doc `src/acd_benchmark/wrappers/shared/host_obs.py` theo cac cum:
+1. `scripts/inspection/smoke_cyborg_cc2.py`
+2. `scripts/inspection/inspect_cc2_spaces.py`
 
-1. constants va hai dataclass;
-2. cac ham normalize va tach observation;
-3. cac ham merge sparse observation;
-4. tao category/schema;
-5. `RawBlueHostEncoder`;
-6. chon feature, adjacency va flatten.
+Script thu nhat chi kiem tra reset/step. Script thu hai in action space va raw
+Blue observation de phuc vu thiet ke protocol moi.
 
-Dung `notes/host_obs_pipeline.md` de giu buc tranh tong the. Dung
-`notes/observation_encoder_design_note.md` de kiem tra y nghia khoa hoc va cac
-gioi han cua representation.
+## 3. Ban Va Simulator
 
-## 3. Hai Graph/Flat View Dung Chung
+1. `CybORG_UPSTREAM.md`
+2. `patches/cyborg_plus_plus/README.md`
+3. `tests/test_cyborg_plus_plus_patches.py`
 
-1. `src/acd_benchmark/wrappers/shared/graph_obs.py`
-2. `src/acd_benchmark/wrappers/shared/flat_obs.py`
+Khong thay CybORG local ma khong port va chay lai regression tests.
 
-`GraphObservation` la representation goc. Flat view chi flatten node features
-va adjacency, giu cung thong tin dau vao cho policy vector va graph.
+## 4. Observation, Topology Va Action
 
-## 4. Partial Observation Va Stage 1
+1. `src/acd_benchmark/cyber/topology.py`
+2. `src/acd_benchmark/cyber/action_space.py`
+3. `src/acd_benchmark/wrappers/shared/observation.py`
+4. `src/acd_benchmark/wrappers/pilot/masking.py`
+5. `src/acd_benchmark/wrappers/pilot/env.py`
 
-1. `src/acd_benchmark/cyber/scalable_scenario.py`
-2. `src/acd_benchmark/wrappers/shared/partial_obs.py`
-3. `src/acd_benchmark/wrappers/stage1/observation.py`
-4. `src/acd_benchmark/wrappers/stage1/env.py`
+Doc theo thu tu tren de thay ro static prior, raw observation, retention mask
+va model-specific output duoc tach nhau nhu the nao.
 
-`Stage1GraphEnv` them frozen topology va host masking. `Stage1FlatEnv` tiep tuc
-la mot view flatten cua cung graph observation. Protocol day du nam trong
-`notes/stage1_protocol.md`.
+## 5. Model Va PPO
 
-## 5. PPO Va Policy
+1. `src/acd_benchmark/rl/pilot_factory.py`
+2. `src/acd_benchmark/rl/policies/flat.py`
+3. `src/acd_benchmark/rl/policies/graphsage.py`
+4. `src/acd_benchmark/rl/rollout/collection.py`
+5. `src/acd_benchmark/rl/ppo/advantages.py`
+6. `src/acd_benchmark/rl/ppo/update.py`
+7. `src/acd_benchmark/rl/ppo/training.py`
 
-Doc theo tung trach nhiem trong cac package sau:
+Flat va GraphSAGE chi khac encoder. Rollout, GAE, objective, optimizer va
+hyperparameters la shared code.
 
-1. Policy interface va action layout:
-   - `src/acd_benchmark/rl/policies/base.py`
-   - `src/acd_benchmark/rl/policies/action_head.py`
-2. Tung encoder rieng:
-   - `src/acd_benchmark/rl/policies/flat.py`
-   - `src/acd_benchmark/rl/policies/graph_base.py`
-   - `src/acd_benchmark/rl/policies/gcn.py`
-   - `src/acd_benchmark/rl/policies/graphsage.py`
-3. Thu thap experience:
-   - `src/acd_benchmark/rl/rollout/types.py`
-   - `src/acd_benchmark/rl/rollout/collection.py`
-4. PPO mathematics va update:
-   - `src/acd_benchmark/rl/ppo/config.py`
-   - `src/acd_benchmark/rl/ppo/advantages.py`
-   - `src/acd_benchmark/rl/ppo/update.py`
-   - `src/acd_benchmark/rl/ppo/training.py`
-   - `src/acd_benchmark/rl/ppo/evaluation.py`
-5. Noi model vao experiment:
-   - `src/acd_benchmark/rl/stage1_factory.py`
-   - `scripts/stage1/train_ppo.py`
+## 6. Evaluation Va Orchestration
 
-Flat, GCN va GraphSAGE dung chung rollout, GAE, clipped PPO loss, optimizer va
-evaluation loop. Chi policy encoder/readout khac nhau.
+1. `src/acd_benchmark/evaluation/metrics.py`
+2. `src/acd_benchmark/evaluation/baselines.py`
+3. `scripts/pilot/audit_protocol.py`
+4. `scripts/pilot/train.py`
+5. `scripts/pilot/evaluate_baselines.py`
+6. `scripts/pilot/evaluate_observation_gate.py`
+7. `scripts/pilot/run_matrix.py`
+8. `scripts/pilot/summarize_results.py`
 
-Khong co facade PPO tong hop. Tests va scripts import truc tiep module so huu
-khai niem do, vi du `policies.gcn`, `rollout.collection`, hoac `ppo.update`.
-Khi them GAT/GIN/GGNN, tao policy module moi trong `policies/`; khong sua rollout
-hoac PPO mathematics neu protocol khong thay doi.
+True state chi duoc doc trong `evaluation/metrics.py`. Bat ky import nguoc tu
+policy/wrapper vao evaluator la vi pham contract.
 
-## 6. Metrics Va Reproducibility
+## 7. Main Benchmark Bi Khoa
 
-1. `src/acd_benchmark/evaluation/operational_metrics.py`
-2. `src/acd_benchmark/utils/reproducibility.py`
-3. `scripts/stage1/evaluate_checkpoint.py`
-4. `scripts/stage1/summarize_results.py`
-5. `scripts/stage1/audit_protocol.py`
-6. `scripts/stage1/analyze_results.py`
-
-True state chi duoc doc trong evaluation metrics, khong duoc dua vao policy
-observation.
-
-## 7. Scripts Ho Tro
-
-- `scripts/inspection/`: smoke, inspect va audit raw observation.
-- `scripts/stage1/`: tao scenario, train, orchestration, audit va phan tich.
-
-## Khong Doc Truoc
-
-- `runs/*/source_snapshot/`: ban dong bang cua tung run, khong phai source hien
-  tai.
-- `runs/archive/stage0_official_cage2/`: evidence cua pilot da dong, khong phai
-  active workflow.
-- Toan bo `CybORG/`: chi mo file upstream khi can truy vet mot behavior cu the.
-- Checkpoint `.pt`, CSV va JSON lon: day la evidence, khong phai implementation.
-
-## Kiem Tra Sau Moi Cum
-
-```bash
-uv run pytest tests/test_raw_obs_wrappers.py tests/test_raw_env.py -q
-uv run pytest tests/test_stage1_observation.py tests/test_stage1_ppo.py -q
-uv run ruff check src scripts tests
-```
+`configs/main_benchmark_16.yaml` chi ghi blocker. Main chi duoc active sau khi
+Pilot dat va topology generator dieu khien dong thoi simulator connectivity va
+graph edges.

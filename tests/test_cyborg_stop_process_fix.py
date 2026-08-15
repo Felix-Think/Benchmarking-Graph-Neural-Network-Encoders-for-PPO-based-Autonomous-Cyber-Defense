@@ -3,12 +3,8 @@
 from types import SimpleNamespace
 from unittest.mock import Mock
 
-from acd_benchmark.cyber.import_path import ensure_cyborg_on_path
-
-ensure_cyborg_on_path()
-
-from CybORG.Simulator.Actions.ConcreteActions.StopProcess import StopProcess  # noqa: E402
-from CybORG.Simulator.Session import Session  # noqa: E402
+from CybORG.Simulator.Actions.ConcreteActions.StopProcess import StopProcess
+from CybORG.Simulator.Session import Session
 
 
 def test_stop_process_reloads_service_from_session_object() -> None:

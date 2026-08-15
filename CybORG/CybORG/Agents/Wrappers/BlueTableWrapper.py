@@ -164,12 +164,14 @@ class BlueTableWrapper(BaseWrapper):
         if None in remote_ports:
             remote_ports.remove(None)
 
-        if num_connections >= 3 and port_focus >=3:
-            anomaly = 'Scan'
-        elif 4444 in remote_ports:
+        if 4444 in remote_ports:
             anomaly = 'Exploit'
+        elif num_connections >= 3 and port_focus >=3:
+            anomaly = 'Scan'
         elif num_connections >= 3 and port_focus == 1:
             anomaly = 'Exploit'
+        elif 'Service Name' in activity[0]:
+            anomaly = 'None'
         else:
             anomaly = 'Scan'
 

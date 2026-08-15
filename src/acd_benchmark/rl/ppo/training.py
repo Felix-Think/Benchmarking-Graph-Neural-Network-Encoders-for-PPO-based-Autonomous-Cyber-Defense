@@ -1,114 +1,226 @@
-"""End-to-end single and vector PPO training updates."""
-
-from typing import Any
+from dataclasses import asdict, dataclass
+from pathlib import Path
+from typing import Callable
+import random
 
 import numpy as np
 import torch
 
-from acd_benchmark.rl.policies.base import ActorCriticPolicy
-from acd_benchmark.rl.ppo.advantages import compute_gae, compute_vector_gae
-from acd_benchmark.rl.ppo.config import PPOConfig
-from acd_benchmark.rl.ppo.update import update_policy
-from acd_benchmark.rl.rollout.collection import collect_rollout, collect_vector_rollout
-from acd_benchmark.rl.rollout.types import EpisodeReturnTracker, Rollout
+from acd_benchmark.rl.ppo.update import ppo_update
+from acd_benchmark.rl.rollout.rollout import RolloutBatch, collect_rollout
 
 
-def train_update(
-    env: Any,
-    policy: ActorCriticPolicy,
+MetricValue = float | int | bool | None
+UpdateCallback = Callable[[dict[str, MetricValue]], None]
+
+
+@dataclass(frozen=True)
+class PPOTrainingConfig:
+    total_timesteps: int = 100_000
+    rollout_steps: int = 2_048
+    learning_rate: float = 3e-4
+    gamma: float = 0.99
+    gae_lambda: float = 0.95
+    update_epochs: int = 4
+    minibatch_size: int = 64
+    clip_coef: float = 0.2
+    value_coef: float = 0.5
+    entropy_coef: float = 0.01
+    max_grad_norm: float = 0.5
+    target_kl: float | None = None
+    seed: int = 42
+    device: str = "cpu"
+    checkpoint_path: str | None = None
+
+
+@dataclass
+class TrainingResult:
+    history: list[dict[str, MetricValue]]
+    episode_returns: list[float]
+    episode_lengths: list[int]
+    total_timesteps: int
+    total_updates: int
+
+
+def seed_runtime(seed: int) -> None:
+    """Seed action sampling and the numerical libraries used by training."""
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+
+
+def _track_completed_episodes(
+    batch: RolloutBatch,
+    running_return: float,
+    running_length: int,
+) -> tuple[list[float], list[int], float, int]:
+    completed_returns: list[float] = []
+    completed_lengths: list[int] = []
+
+    rewards = batch.rewards.detach().cpu().tolist()
+    terminated = batch.terminated.detach().cpu().tolist()
+    truncated = batch.truncated.detach().cpu().tolist()
+
+    for reward, was_terminated, was_truncated in zip(
+        rewards,
+        terminated,
+        truncated,
+    ):
+        running_return += float(reward)
+        running_length += 1
+
+        if was_terminated or was_truncated:
+            completed_returns.append(running_return)
+            completed_lengths.append(running_length)
+            running_return = 0.0
+            running_length = 0
+
+    return (
+        completed_returns,
+        completed_lengths,
+        running_return,
+        running_length,
+    )
+
+
+def save_training_checkpoint(
+    path: str | Path,
+    policy: torch.nn.Module,
     optimizer: torch.optim.Optimizer,
-    observation: Any,
-    config: PPOConfig,
-    device: torch.device,
-    *,
-    episode_return_tracker: EpisodeReturnTracker | None = None,
-) -> tuple[Any, dict[str, float]]:
-    """Collect one single-env rollout, estimate advantages, and update PPO."""
-    rollout = collect_rollout(
-        env,
-        policy,
-        observation,
-        config,
-        device,
-        episode_return_tracker=episode_return_tracker,
+    config: PPOTrainingConfig,
+    result: TrainingResult,
+) -> None:
+    checkpoint_path = Path(path)
+    checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
+    torch.save(
+        {
+            "policy_state_dict": policy.state_dict(),
+            "optimizer_state_dict": optimizer.state_dict(),
+            "config": asdict(config),
+            "history": result.history,
+            "episode_returns": result.episode_returns,
+            "episode_lengths": result.episode_lengths,
+            "total_timesteps": result.total_timesteps,
+            "total_updates": result.total_updates,
+        },
+        checkpoint_path,
     )
-    next_prepared = policy.prepare_observation(rollout.next_observation, device)
-    with torch.no_grad():
-        _, next_value = policy.forward_prepared(next_prepared)
-    advantages, returns = compute_gae(
-        rewards=rollout.rewards,
-        values=rollout.values,
-        dones=rollout.dones,
-        next_value=next_value,
-        gamma=config.gamma,
-        gae_lambda=config.gae_lambda,
-    )
-    losses = update_policy(policy, optimizer, rollout, advantages, returns, config)
-    losses["mean_completed_episode_return"] = (
-        float(np.mean(rollout.episode_returns))
-        if rollout.episode_returns
-        else float("nan")
-    )
-    losses["completed_episodes"] = float(len(rollout.episode_returns))
-    return rollout.next_observation, losses
 
 
-def train_vector_update(
-    envs: list[Any],
-    policy: ActorCriticPolicy,
-    optimizer: torch.optim.Optimizer,
-    observations: list[Any],
-    config: PPOConfig,
-    device: torch.device,
+def train_policy(
+    env,
+    policy: torch.nn.Module,
+    config: PPOTrainingConfig,
     *,
-    steps_per_env: int,
-    episode_return_tracker: EpisodeReturnTracker | None = None,
-) -> tuple[list[Any], dict[str, float]]:
-    """Collect vector rollouts, estimate advantages, and update PPO."""
-    vector_rollout = collect_vector_rollout(
-        envs,
-        policy,
-        observations,
-        steps_per_env=steps_per_env,
-        device=device,
-        episode_return_tracker=episode_return_tracker,
+    optimizer: torch.optim.Optimizer | None = None,
+    on_update: UpdateCallback | None = None,
+) -> TrainingResult:
+    """Train one policy with sequential single-environment PPO rollouts."""
+    assert config.total_timesteps > 0
+    assert config.rollout_steps > 0
+    assert config.minibatch_size > 0
+    assert config.update_epochs > 0
+
+    seed_runtime(config.seed)
+    device = torch.device(config.device)
+    policy.to(device)
+
+    if optimizer is None:
+        optimizer = torch.optim.Adam(
+            policy.parameters(),
+            lr=config.learning_rate,
+        )
+
+    observation, _ = env.reset(seed=config.seed)
+    history: list[dict[str, MetricValue]] = []
+    episode_returns: list[float] = []
+    episode_lengths: list[int] = []
+    running_episode_return = 0.0
+    running_episode_length = 0
+    global_step = 0
+    update_index = 0
+
+    while global_step < config.total_timesteps:
+        steps_this_rollout = min(
+            config.rollout_steps,
+            config.total_timesteps - global_step,
+        )
+        batch, observation = collect_rollout(
+            env=env,
+            policy=policy,
+            initial_observation=observation,
+            rollout_steps=steps_this_rollout,
+            gamma=config.gamma,
+            gae_lambda=config.gae_lambda,
+        )
+
+        update_metrics = ppo_update(
+            policy=policy,
+            batch=batch,
+            optimizer=optimizer,
+            update_epochs=config.update_epochs,
+            minibatch_size=config.minibatch_size,
+            clip_coef=config.clip_coef,
+            value_coef=config.value_coef,
+            entropy_coef=config.entropy_coef,
+            max_grad_norm=config.max_grad_norm,
+            target_kl=config.target_kl,
+        )
+
+        (
+            completed_returns,
+            completed_lengths,
+            running_episode_return,
+            running_episode_length,
+        ) = _track_completed_episodes(
+            batch,
+            running_episode_return,
+            running_episode_length,
+        )
+        episode_returns.extend(completed_returns)
+        episode_lengths.extend(completed_lengths)
+
+        global_step += steps_this_rollout
+        update_index += 1
+        metrics: dict[str, MetricValue] = {
+            "update": update_index,
+            "global_step": global_step,
+            "rollout_reward_mean": float(batch.rewards.mean()),
+            "completed_episodes": len(completed_returns),
+            "episode_return_mean": (
+                float(np.mean(completed_returns))
+                if completed_returns
+                else None
+            ),
+            "episode_length_mean": (
+                float(np.mean(completed_lengths))
+                if completed_lengths
+                else None
+            ),
+        }
+        metrics.update(update_metrics)
+        history.append(metrics)
+
+        if on_update is not None:
+            on_update(metrics)
+
+    result = TrainingResult(
+        history=history,
+        episode_returns=episode_returns,
+        episode_lengths=episode_lengths,
+        total_timesteps=global_step,
+        total_updates=update_index,
     )
-    next_prepared = [
-        policy.prepare_observation(observation, device)
-        for observation in vector_rollout.next_observations
-    ]
-    with torch.no_grad():
-        _, next_values = policy.forward_batch(next_prepared)
-    advantages, returns = compute_vector_gae(
-        rewards=vector_rollout.rewards,
-        values=vector_rollout.values,
-        dones=vector_rollout.dones,
-        next_values=next_values,
-        gamma=config.gamma,
-        gae_lambda=config.gae_lambda,
-    )
-    flat_rollout = Rollout(
-        observations=vector_rollout.observations,
-        actions=vector_rollout.actions.reshape(-1),
-        old_log_probs=vector_rollout.old_log_probs.reshape(-1),
-        values=vector_rollout.values.reshape(-1),
-        rewards=vector_rollout.rewards.reshape(-1),
-        dones=vector_rollout.dones.reshape(-1),
-        next_observation=vector_rollout.next_observations,
-        episode_returns=vector_rollout.episode_returns,
-    )
-    losses = update_policy(
-        policy,
-        optimizer,
-        flat_rollout,
-        advantages.reshape(-1),
-        returns.reshape(-1),
-        config,
-    )
-    losses["mean_completed_episode_return"] = (
-        float(np.mean(vector_rollout.episode_returns))
-        if vector_rollout.episode_returns
-        else float("nan")
-    )
-    losses["completed_episodes"] = float(len(vector_rollout.episode_returns))
-    return vector_rollout.next_observations, losses
+
+    if config.checkpoint_path is not None:
+        save_training_checkpoint(
+            path=config.checkpoint_path,
+            policy=policy,
+            optimizer=optimizer,
+            config=config,
+            result=result,
+        )
+
+    return result

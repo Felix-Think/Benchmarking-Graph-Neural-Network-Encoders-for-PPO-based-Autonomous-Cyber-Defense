@@ -1,114 +1,117 @@
-"""PPO objective calculation and minibatch optimization."""
+import torch 
+from torch.nn.utils import clip_grad_norm_
 
-import numpy as np
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-from torch.distributions import Categorical
+from acd_benchmark.rl.rollout.rollout import RolloutBatch
 
-from acd_benchmark.rl.policies.base import ActorCriticPolicy
-from acd_benchmark.rl.ppo.config import PPOConfig
-from acd_benchmark.rl.rollout.types import Rollout
+def ppo_update(policy, 
+               batch: RolloutBatch, 
+               optimizer : torch.optim.Optimizer, 
+               update_epochs : int = 4,
+               minibatch_size : int = 64,
+               clip_coef: float = 0.2,
+               value_coef: float = 0.5,
+               entropy_coef: float = 0.01,
+               max_grad_norm: float = 0.5,
+               target_kl: float | None = None) -> dict:
 
-
-def update_policy(
-    policy: ActorCriticPolicy,
-    optimizer: torch.optim.Optimizer,
-    rollout: Rollout,
-    advantages: torch.Tensor,
-    returns: torch.Tensor,
-    config: PPOConfig,
-) -> dict[str, float]:
-    """Run clipped PPO minibatch updates over one on-policy rollout."""
     policy.train()
-    advantages = (advantages - advantages.mean()) / (
-        advantages.std(unbiased=False) + 1e-8
-    )
-    rollout_size = len(rollout.actions)
-    indices = np.arange(rollout_size)
-    policy_losses: list[float] = []
-    value_losses: list[float] = []
-    entropies: list[float] = []
-    approximate_kls: list[float] = []
-    clip_fractions: list[float] = []
-    gradient_norms: list[float] = []
 
-    returns_variance = torch.var(returns, unbiased=False)
-    if float(returns_variance.item()) > 1e-8:
-        explained_variance = 1.0 - torch.var(
-            returns - rollout.values,
-            unbiased=False,
-        ) / returns_variance
-        explained_variance_value = float(explained_variance.item())
-    else:
-        explained_variance_value = float("nan")
+    device = next(policy.parameters()).device 
 
-    for _ in range(config.ppo_epochs):
-        np.random.shuffle(indices)
-        for start in range(0, rollout_size, config.batch_size):
-            batch_indices = indices[start : start + config.batch_size]
-            batch_observations = [
-                rollout.observations[index]
-                for index in batch_indices
-            ]
-            logits, new_values = policy.forward_batch(batch_observations)
-            distribution = Categorical(logits=logits)
-            action_indices = torch.as_tensor(
-                batch_indices,
-                device=rollout.actions.device,
-            )
-            new_log_probs = distribution.log_prob(rollout.actions[action_indices])
-            entropy = distribution.entropy().mean()
+    observations = batch.observations.to(device)
+    actions = batch.actions.to(device)
+    old_log_probs = batch.old_log_probs.to(device)
+    returns = batch.returns.to(device)
+    advantages = batch.advantages.to(device)
 
-            ratio = (new_log_probs - rollout.old_log_probs[action_indices]).exp()
-            log_ratio = new_log_probs - rollout.old_log_probs[action_indices]
-            batch_advantages = advantages[action_indices].detach()
-            unclipped_objective = ratio * batch_advantages
-            clipped_objective = torch.clamp(
-                ratio,
-                min=1.0 - config.ppo_clip,
-                max=1.0 + config.ppo_clip,
-            ) * batch_advantages
-            policy_loss = -torch.min(
-                unclipped_objective,
-                clipped_objective,
-            ).mean()
-            value_loss = F.smooth_l1_loss(
-                new_values,
-                returns[action_indices].detach(),
-            )
-            loss = (
-                policy_loss
-                + config.value_coef * value_loss
-                - config.entropy_coef * entropy
-            )
+    #normalize advantages
+    advantages = (advantages - advantages.mean()) / (advantages.std(unbiased=False) + 1e-8)
 
-            optimizer.zero_grad()
-            loss.backward()
-            gradient_norm = nn.utils.clip_grad_norm_(
-                policy.parameters(),
-                config.max_grad_norm,
+    batch_size = actions.shape[0]
+    metric_sums = {
+        "policy_loss": 0.0,
+        "value_loss" : 0.0,
+        "entropy": 0.0,
+        "approx_kl": 0.0,
+        "clip_fraction": 0.0,
+        "grad_norm": 0.0,
+        "total_loss": 0.0,
+    }
+    samples_processed = 0
+    optimizer_steps = 0
+    early_stopped = False 
+
+    for _ in range(update_epochs):
+        indices = torch.randperm(batch_size, device = device)
+
+        epoch_kl_sum = 0.0
+        epoch_samples = 0
+
+        for start in range(0, batch_size, minibatch_size):
+            minibatch_indices = indices[start: start+ minibatch_size]
+
+            _, new_log_probs, entropy, new_values = policy.get_action_and_value(observations[minibatch_indices], action = actions[minibatch_indices])
+
+            log_ratio = (new_log_probs - old_log_probs[minibatch_indices])
+            ratio = log_ratio.exp()
+
+            minibatch_advantages = advantages[minibatch_indices]
+            policy_loss_unclipped = ratio * minibatch_advantages
+            policy_loss_clipped = minibatch_advantages * torch.clamp(ratio, min = 1.0 - clip_coef, max = 1.0 + clip_coef)
+
+            policy_loss = -torch.min(policy_loss_clipped, policy_loss_unclipped).mean()
+            value_loss = 0.5 * (new_values - returns[minibatch_indices]).pow(2).mean()
+
+            entropy_mean = entropy.mean()
+
+            total_loss = (policy_loss + value_coef * value_loss - entropy_coef * entropy_mean)
+
+            with torch.no_grad():
+                approx_kl = ((ratio - 1.0) - log_ratio).mean()
+                clip_fraction = ((ratio - 1.0).abs() > clip_coef).float().mean()
+            optimizer.zero_grad(set_to_none=True)
+            total_loss.backward()
+
+            grad_norm = clip_grad_norm_(
+                policy.parameters(), max_grad_norm,
             )
             optimizer.step()
 
-            policy_losses.append(float(policy_loss.item()))
-            value_losses.append(float(value_loss.item()))
-            entropies.append(float(entropy.item()))
-            approximate_kls.append(
-                float(((ratio - 1.0) - log_ratio).mean().detach().item())
-            )
-            clip_fractions.append(
-                float(((ratio - 1.0).abs() > config.ppo_clip).float().mean().item())
-            )
-            gradient_norms.append(float(gradient_norm.item()))
+            minibatch_count = len(minibatch_indices)
 
-    return {
-        "policy_loss": float(np.mean(policy_losses)),
-        "value_loss": float(np.mean(value_losses)),
-        "entropy": float(np.mean(entropies)),
-        "approx_kl": float(np.mean(approximate_kls)),
-        "clip_fraction": float(np.mean(clip_fractions)),
-        "explained_variance": explained_variance_value,
-        "gradient_norm": float(np.mean(gradient_norms)),
-        "learning_rate": float(optimizer.param_groups[0]["lr"]),
+            values_to_log = {
+                "policy_loss": policy_loss,
+                "value_loss": value_loss,
+                "entropy": entropy_mean,
+                "approx_kl": approx_kl,
+                "clip_fraction": clip_fraction,
+                "grad_norm": grad_norm,
+                "total_loss": total_loss,
+            }
+            for name, value in values_to_log.items():
+                metric_sums[name] += (
+                    float(value.detach())
+                    * minibatch_count
+                )
+
+            samples_processed += minibatch_count
+            optimizer_steps += 1
+            epoch_kl_sum += (
+                float(approx_kl) * minibatch_count
+            )
+            epoch_samples += minibatch_count
+
+        mean_epoch_kl = epoch_kl_sum / epoch_samples
+
+        if(target_kl is not None and mean_epoch_kl > target_kl):
+            early_stopped = True
+            break
+    metrics = {
+        name: total / samples_processed
+        for name, total in metric_sums.items()
     }
+
+    metrics["optimizer_steps"] = optimizer_steps
+    metrics["early_stopped"] = early_stopped
+
+    return metrics

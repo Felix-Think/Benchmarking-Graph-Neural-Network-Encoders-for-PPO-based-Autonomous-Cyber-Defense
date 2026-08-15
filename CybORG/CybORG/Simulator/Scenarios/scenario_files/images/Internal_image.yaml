@@ -32,6 +32,7 @@ Test_Host:
     PPID: 372
     Process Name: smss.exe
     Username: SYSTEM
+    Process Type: smb
   - Connections:
     - local_address: 0.0.0.0
       local_port: 80

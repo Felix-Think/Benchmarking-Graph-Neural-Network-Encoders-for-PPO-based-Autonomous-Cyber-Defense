@@ -1,102 +1,32 @@
-"""Action-space inspection and adaptation utilities."""
+from CybORG.Simulator.Actions import Sleep, Analyse, Remove, Restore, Monitor
 
-from __future__ import annotations
+from acd_benchmark.cyber.blue_table_env import HOST_NAMES
 
-from dataclasses import dataclass
-from typing import Any
+TARGET_ACTION = {
+    "Analyse": Analyse,
+    "Restore": Restore,
+    "Remove" : Remove, 
+}
+ACTION_SPACE = [
+    (action, hostname) for action in TARGET_ACTION for hostname in HOST_NAMES
+]
+ACTION_SPACE.insert(0, ("Monitor", None))
+ACTION_SPACE.insert(0, ("Sleep", None))
 
-from acd_benchmark.cyber.import_path import ensure_cyborg_on_path
+def build_action(action_id):
+    action_name, action_host = ACTION_SPACE[action_id]
 
-ensure_cyborg_on_path()
+    if action_name == "Sleep":
+        return Sleep()
+    if action_name == "Monitor":
+        return Monitor(session = 0, agent = "Blue")
+    action_class = TARGET_ACTION[action_name]
+    return action_class(session = 0, agent = "Blue", hostname = action_host) # exp: Remove(session =0, agent = "Blue",hostnamne = action_host)
 
-from CybORG.Simulator.Actions.Action import Sleep  # noqa: E402
-from CybORG.Simulator.Actions.AbstractActions import Analyse, Misinform, Monitor, Remove, Restore  # noqa: E402
-from CybORG.Simulator.Actions.ConcreteActions.DecoyActions import (  # noqa: E402
-    DecoyApache,
-    DecoyFemitter,
-    DecoyHarakaSMPT,
-    DecoySmss,
-    DecoySSHD,
-    DecoySvchost,
-    DecoyTomcat,
-    DecoyVsftpd,
-)
+def describe_action(action_id):
+    action_name, hostname = ACTION_SPACE[action_id]
+    return action_name if hostname is None else f"{action_name}({hostname})"
 
-
-GLOBAL_BLUE_ACTIONS = (Sleep, Monitor)
-HOST_BLUE_ACTIONS = (
-    Analyse,
-    Remove,
-    Restore,
-    DecoyApache,
-    DecoyFemitter,
-    DecoyHarakaSMPT,
-    DecoySmss,
-    DecoySSHD,
-    DecoySvchost,
-    DecoyTomcat,
-    DecoyVsftpd,
-)
-
-
-@dataclass(frozen=True)
-class BlueActionSpec:
-    """One entry in the benchmark's fixed discrete Blue action list.
-
-    CybORG expects action objects with keyword arguments, while the benchmark
-    policy emits an integer. This object is the reversible bridge between them.
-    """
-
-    action_cls: type
-    hostname: str | None = None
-
-    @property
-    def name(self) -> str:
-        """Human-readable action name used in reports/debugging."""
-        if self.hostname is None:
-            return self.action_cls.__name__
-        return f"{self.action_cls.__name__}({self.hostname})"
-
-    def instantiate(self, session: int = 0, agent: str = "Blue") -> Any:
-        """Create the concrete CybORG action object for one env step."""
-        if self.action_cls is Sleep:
-            return self.action_cls()
-        if self.action_cls is Monitor:
-            return self.action_cls(session=session, agent=agent)
-        if self.hostname is None:
-            raise ValueError(f"{self.action_cls.__name__} requires a hostname")
-        return self.action_cls(session=session, agent=agent, hostname=self.hostname)
-
-
-def build_blue_discrete_action_specs(
-    action_space: dict[str, Any],
-    hostnames: tuple[str, ...],
-    include_misinform: bool = False,
-) -> tuple[BlueActionSpec, ...]:
-    """Build a stable flattened Blue action list from the native action space.
-
-    The default list mirrors the common CAGE2/ChallengeWrapper-style action
-    family: two global actions plus host-parameterized analyse/remove/restore
-    and decoy actions. Native CC2 also exposes ``Misinform``; it remains an
-    explicit option because the benchmark's ChallengeWrapper-style action
-    surface excludes it by default.
-    """
-    enabled_actions = {
-        action_cls
-        for action_cls, enabled in action_space.get("action", {}).items()
-        if enabled
-    }
-    host_action_classes = list(HOST_BLUE_ACTIONS)
-    if include_misinform:
-        host_action_classes.insert(2, Misinform)
-
-    specs: list[BlueActionSpec] = [
-        BlueActionSpec(action_cls)
-        for action_cls in GLOBAL_BLUE_ACTIONS
-        if action_cls in enabled_actions
-    ]
-    for hostname in hostnames:
-        for action_cls in host_action_classes:
-            if action_cls in enabled_actions:
-                specs.append(BlueActionSpec(action_cls=action_cls, hostname=hostname))
-    return tuple(specs)
+if __name__ == '__main__':
+    for i in range(len(ACTION_SPACE)):
+        print(f"|{i + 1}| {ACTION_SPACE[i]}")

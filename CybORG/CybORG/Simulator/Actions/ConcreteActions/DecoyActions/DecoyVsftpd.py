@@ -18,7 +18,7 @@ class VsftpdDecoyFactory(DecoyFactory):
     def make_decoy(self, host: Host) -> Decoy:
         del host
         return Decoy(service_name="vsftpd", name="vsftpd",
-                open_ports=[{'local_port':80, 'local_address':'0.0.0.0'}],
+                open_ports=[{'local_port':21, 'local_address':'0.0.0.0'}],
                 process_type="webserver", properties=["rfi"],
                 process_path="/usr/sbin")
 

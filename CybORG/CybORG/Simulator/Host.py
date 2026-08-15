@@ -328,7 +328,7 @@ class Host(Entity):
         if self.services is not None:
             for service_name, service_info in self.services.items():
                 self.original_services[service_name] = {'active': service_info.get('active'),
-                                               'process': service_info.get('PID')}
+                                               'process': service_info.get('process')}
 
     def restore(self):
         self.events = {'NetworkConnections': [], 'ProcessCreation': []}
@@ -388,7 +388,7 @@ class Host(Entity):
         if self.original_services is not None:
             for service_name, service_info in self.original_services.items():
                 self.services[service_name] = {'active': service_info.get('active'),
-                                                        'process': service_info.get('PID')}
+                                                        'process': service_info.get('process')}
 
     def update(self, state):
         """Performs an update of host for the end of turn"""

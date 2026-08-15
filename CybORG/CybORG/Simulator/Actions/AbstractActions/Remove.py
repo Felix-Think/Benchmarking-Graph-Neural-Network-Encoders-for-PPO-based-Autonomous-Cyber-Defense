@@ -25,12 +25,12 @@ class Remove(Action):
         sessions = [s for s in state.sessions[self.agent].values() if s.hostname == self.hostname]
         if len(sessions) > 0:
             session = state.np_random.choice(sessions)
-            obs = Observation(True)
+            obs = Observation(False)
             # remove suspicious processes
             if self.hostname in parent_session.sus_pids:
                 for sus_pid in parent_session.sus_pids[self.hostname]:
                     action = StopProcess(session=self.session, agent=self.agent, target_session=session.ident, pid=sus_pid)
-                    action.execute(state)
+                    obs = action.execute(state)
             # remove suspicious files
             return obs
         else:

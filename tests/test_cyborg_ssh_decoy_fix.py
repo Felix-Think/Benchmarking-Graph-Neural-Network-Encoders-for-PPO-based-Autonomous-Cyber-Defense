@@ -1,11 +1,9 @@
 from ipaddress import IPv4Address
 from types import SimpleNamespace
 
-from acd_benchmark.cyber.import_path import ensure_cyborg_on_path
-
-ensure_cyborg_on_path()
-
-from CybORG.Simulator.Actions.ConcreteActions.ExploitActions.SSHBruteForce import SSHBruteForce  # noqa: E402
+from CybORG.Simulator.Actions.ConcreteActions.ExploitActions.SSHBruteForce import (
+    SSHBruteForce,
+)
 
 
 def test_ssh_bruteforce_records_exploit_decoy_event():

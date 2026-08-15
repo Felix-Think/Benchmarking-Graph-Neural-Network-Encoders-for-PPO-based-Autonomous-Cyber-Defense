@@ -1,9 +1,13 @@
-from acd_benchmark.cyber.env_factory import make_cc2_env
 from CybORG.Agents import BlueReactRemoveAgent
+
+from acd_benchmark.cyber.cc2_env import (
+    get_default_scenario_path,
+    make_cc2_env,
+)
 
 
 def test_cc2_env_steps_once():
-    cyborg = make_cc2_env()
+    cyborg = make_cc2_env(get_default_scenario_path())
     agent = BlueReactRemoveAgent()
 
     results = cyborg.reset("Blue")

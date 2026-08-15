@@ -1,49 +1,46 @@
-"""Generalized advantage estimation and return targets for PPO."""
+import torch 
+@torch.no_grad()
 
-import torch
-
-
-def compute_gae(
+def comput_gae(
     rewards: torch.Tensor,
-    values: torch.Tensor,
-    dones: torch.Tensor,
-    next_value: torch.Tensor,
-    gamma: float,
-    gae_lambda: float,
+    values: torch.Tensor, 
+    next_values: torch.Tensor, 
+    terminated: torch.Tensor, 
+    truncated: torch.Tensor,
+    gamma: float = 0.99,
+    gae_lambda: float = 0.95
 ) -> tuple[torch.Tensor, torch.Tensor]:
-    """Compute single-environment GAE advantages and bootstrapped returns."""
     advantages = torch.zeros_like(rewards)
-    gae = torch.tensor(0.0, device=rewards.device)
-    running_next_value = next_value.detach()
-    for index in reversed(range(len(rewards))):
-        non_terminal = 1.0 - dones[index]
-        delta = rewards[index] + gamma * running_next_value * non_terminal - values[index]
-        gae = delta + gamma * gae_lambda * non_terminal * gae
-        advantages[index] = gae
-        running_next_value = values[index]
-    return advantages, advantages + values
+    last_advantage = torch.zeros(
+        (),
+        dtype=rewards.dtype,
+        device=rewards.device,
+    )
+    for t in reversed(range(len(rewards))):
+        # True terminal: không bootstrap từ next state.
+        bootstrap_mask = (~terminated[t]).to(rewards.dtype)
 
+        # Cả terminal và time-limit đều kết thúc trajectory hiện tại.
+        continuation_mask = (
+            ~(terminated[t] | truncated[t])
+        ).to(rewards.dtype)
 
-def compute_vector_gae(
-    rewards: torch.Tensor,
-    values: torch.Tensor,
-    dones: torch.Tensor,
-    next_values: torch.Tensor,
-    gamma: float,
-    gae_lambda: float,
-) -> tuple[torch.Tensor, torch.Tensor]:
-    """Compute independent GAE trajectories for ``[time, env]`` tensors."""
-    if rewards.ndim != 2 or values.shape != rewards.shape or dones.shape != rewards.shape:
-        raise ValueError("Vector GAE expects matching [time, env] tensors.")
-    if next_values.shape != (rewards.shape[1],):
-        raise ValueError("next_values must contain one value per environment.")
-    advantages = torch.zeros_like(rewards)
-    gae = torch.zeros(rewards.shape[1], device=rewards.device)
-    running_next_values = next_values.detach()
-    for timestep in reversed(range(rewards.shape[0])):
-        non_terminal = 1.0 - dones[timestep]
-        delta = rewards[timestep] + gamma * running_next_values * non_terminal - values[timestep]
-        gae = delta + gamma * gae_lambda * non_terminal * gae
-        advantages[timestep] = gae
-        running_next_values = values[timestep]
-    return advantages, advantages + values
+        delta = (
+            rewards[t]
+            + gamma * next_values[t] * bootstrap_mask
+            - values[t]
+        )
+
+        last_advantage = (
+            delta
+            + gamma
+            * gae_lambda
+            * continuation_mask
+            * last_advantage
+        )
+
+        advantages[t] = last_advantage
+
+    returns = advantages + values
+
+    return advantages, returns           

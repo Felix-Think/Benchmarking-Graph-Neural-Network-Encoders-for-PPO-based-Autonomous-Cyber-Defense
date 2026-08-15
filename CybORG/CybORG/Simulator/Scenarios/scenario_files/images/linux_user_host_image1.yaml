@@ -14,7 +14,7 @@ Test_Host:
       'rfi'
   - Connections:
     - local_address: 0.0.0.0
-      local_port: 3389
+      local_port: 3390
       Transport Protocol: TCP
     PID: 1101
     PPID: 1
