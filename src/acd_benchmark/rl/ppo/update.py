@@ -23,7 +23,7 @@ def ppo_update(policy,
     old_log_probs = batch.old_log_probs.to(device)
     returns = batch.returns.to(device)
     advantages = batch.advantages.to(device)
-
+    action_masks = batch.action_masks.to(device)
     #normalize advantages
     advantages = (advantages - advantages.mean()) / (advantages.std(unbiased=False) + 1e-8)
 
@@ -50,7 +50,11 @@ def ppo_update(policy,
         for start in range(0, batch_size, minibatch_size):
             minibatch_indices = indices[start: start+ minibatch_size]
 
-            _, new_log_probs, entropy, new_values = policy.get_action_and_value(observations[minibatch_indices], action = actions[minibatch_indices])
+            _, new_log_probs, entropy, new_values = policy.get_action_and_value(
+                observations[minibatch_indices],
+                action=actions[minibatch_indices],
+                action_mask=action_masks[minibatch_indices],
+            )
 
             log_ratio = (new_log_probs - old_log_probs[minibatch_indices])
             ratio = log_ratio.exp()

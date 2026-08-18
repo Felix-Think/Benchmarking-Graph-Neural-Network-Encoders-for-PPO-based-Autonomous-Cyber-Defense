@@ -2,23 +2,32 @@ from dataclasses import dataclass
 
 import torch
 
-from acd_benchmark.rl.ppo.advantages import comput_gae
-from acd_benchmark.cyber.action_space import build_action
+from acd_benchmark.rl.ppo.advantages import compute_smdp_gae
 
 @dataclass
 class RolloutBatch:
     observations: torch.Tensor
     actions: torch.Tensor
+    action_masks: torch.Tensor
     old_log_probs: torch.Tensor
     rewards: torch.Tensor
     values: torch.Tensor
     next_values: torch.Tensor
     terminated: torch.Tensor
     truncated: torch.Tensor
+    durations: torch.Tensor
     advantages: torch.Tensor
     returns: torch.Tensor
 
-
+@dataclass
+class PendingTransition:
+    observation: torch.Tensor
+    action: torch.Tensor
+    action_mask: torch.Tensor
+    log_prob: torch.Tensor
+    value: torch.Tensor
+    discounted_reward: float = 0.0
+    duration: int = 0
 class RolloutBuffer:
     def __init__(self, device : torch.device):
         self.clear()
@@ -32,7 +41,8 @@ class RolloutBuffer:
         self.next_values = []
         self.terminated = []
         self.truncated = []
-
+        self.action_mask = []
+        self.durations = []
 
     def __len__(self):
         return len(self.rewards)
@@ -41,82 +51,60 @@ class RolloutBuffer:
         self,
         observation,
         action,
+        action_mask,
         log_prob,
         reward,
         value,
         next_value,
+        duration,
         terminated,
         truncated,
     ):
-        self.observations.append(
-            observation.detach().to(self.device)
-        )
-        self.actions.append(
-            action.detach().to(self.device).reshape(())
-        )
-        self.log_probs.append(
-            log_prob.detach().to(self.device).reshape(())
-        )
-
+        self.observations.append(observation.detach().to(self.device))
+        self.actions.append(action.detach().to(self.device).reshape(()))
+        self.action_mask.append(action_mask.detach().bool().to(self.device))
+        self.log_probs.append(log_prob.detach().to(self.device).reshape(()))
         self.rewards.append(float(reward))
-
-        self.values.append(
-            value.detach().to(self.device).reshape(())
-        )
-        self.next_values.append(
-            next_value.detach().to(self.device).reshape(())
-        )
-
+        self.values.append(value.detach().to(self.device).reshape(()))
+        self.next_values.append(next_value.detach().to(self.device).reshape(()))
+        self.durations.append(int(duration))
         self.terminated.append(bool(terminated))
         self.truncated.append(bool(truncated))
+
 
     def build(
         self,
         gamma: float = 0.99,
         gae_lambda: float = 0.95,
+        reward_scale=0.01,
     ) -> RolloutBatch:
-        observations = torch.stack(
-            self.observations
-        ).to(self.device)
+        observations = torch.stack(self.observations).to(self.device)
 
-        actions = torch.stack(
-            self.actions
-        ).long().to(self.device)
+        actions = torch.stack(self.actions).long().to(self.device)
 
-        old_log_probs = torch.stack(
-            self.log_probs
-        ).float().to(self.device)
+        action_mask = torch.stack(self.action_mask).to(self.device)
 
-        rewards = torch.tensor(
-            self.rewards,
-            dtype=torch.float32,
-            device=self.device,
-        )
+        old_log_probs = torch.stack(self.log_probs).float().to(self.device)
 
-        values = torch.stack(
-            self.values
-        ).float().to(self.device)
+        raw_rewards = torch.tensor(self.rewards,dtype=torch.float32,device=self.device,)
 
-        next_values = torch.stack(
-            self.next_values
-        ).float().to(self.device)
+        values = torch.stack(self.values).float().to(self.device)
 
-        terminated = torch.tensor(
-            self.terminated,
-            dtype=torch.bool,
-            device=self.device,
-        )
+        next_values = torch.stack(self.next_values).float().to(self.device)
 
-        truncated = torch.tensor(
-            self.truncated,
-            dtype=torch.bool,
-            device=self.device,
-        )
+        durations = torch.tensor(self.durations, dtype=torch.float32, device=self.device,)
 
-        advantages, returns = comput_gae(
-            rewards=rewards,
+        terminated = torch.tensor(self.terminated,dtype=torch.bool,device=self.device,)
+
+        truncated = torch.tensor(self.truncated,dtype=torch.bool,device=self.device,)
+
+        scaled_rewards = raw_rewards * reward_scale
+
+        advantages, returns = compute_smdp_gae(
+            rewards=scaled_rewards,
             values=values,
             next_values=next_values,
+            durations=durations,
             terminated=terminated,
             truncated=truncated,
             gamma=gamma,
@@ -126,81 +114,152 @@ class RolloutBuffer:
         return RolloutBatch(
             observations=observations,
             actions=actions,
+            action_masks= action_mask,
             old_log_probs=old_log_probs,
-            rewards=rewards,
+            rewards=scaled_rewards,
             values=values,
             next_values=next_values,
             terminated=terminated,
             truncated=truncated,
+            durations=durations,
             advantages=advantages,
             returns=returns,
         )
 
-def collect_rollout(env, policy, initial_observation, rollout_steps, gamma=0.99, gae_lambda=0.95):
+def collect_rollout(env, policy, seed, gamma=0.99, gae_lambda = 0.95, reward_scale=0.01):
     device = next(policy.parameters()).device
-    buffer = RolloutBuffer(device = device)
-    observation = initial_observation
+    observations, infos = env.reset(seed=seed)
 
-    for _ in range(rollout_steps):
-        observation_tensor = torch.as_tensor(
-            observation,
-            dtype=torch.float32,
-            device=device,
+    buffers = {
+        agent: RolloutBuffer(device)
+        for agent in env.possible_agents
+    }
+    pending = {}
+
+    team_return = 0.0
+    simulator_steps = 0
+
+    while True:
+        actions = {}
+
+        # Chỉ tạo quyết định cho những agent đang rảnh.
+        for agent in env.possible_agents:
+            if not infos[agent]["decision_ready"]:
+                continue
+
+            assert agent not in pending
+
+            observation = torch.as_tensor(
+                observations[agent],
+                dtype=torch.float32,
+                device=device,
+            )
+            action_mask = torch.as_tensor(
+                infos[agent]["action_mask"],
+                dtype=torch.bool,
+                device=device,
+            )
+
+            with torch.no_grad():
+                action, log_prob, _, value = (
+                    policy.get_action_and_value(
+                        observation,
+                        action_mask=action_mask,
+                    )
+                )
+
+            actions[agent] = int(action.item())
+            pending[agent] = PendingTransition(
+                observation=observation,
+                action_mask=action_mask,
+                action=action,
+                log_prob=log_prob,
+                value=value,
+            )
+
+        (next_observations, rewards, terminated, truncated, next_infos,) = env.step(actions)
+
+        simulator_steps += 1
+
+        # CAGE 4 wrapper hiện gán cùng done cho cả hai loại.
+        episode_done = all(
+            terminated.get(agent, False)
+            or truncated.get(agent, False)
+            for agent in env.possible_agents
         )
 
-        with torch.no_grad():
-            action, log_prob, _, value = (policy.get_action_and_value(observation_tensor))
+        # Cập nhật reward cho action đang chạy của từng agent.
+        for agent, transition in list(pending.items()):
+            transition.discounted_reward += (
+                gamma ** transition.duration
+            ) * float(rewards[agent])
+            transition.duration += 1
 
-        action_id = int(action.item())
-        cyborg_action = build_action(action_id)
+            action_completed = next_infos[agent]["decision_ready"]
 
-        next_observation, reward, terminated, truncated, _ = (env.step(cyborg_action))
+            if action_completed or episode_done:
+                next_observation = torch.as_tensor(
+                    next_observations[agent],
+                    dtype=torch.float32,
+                    device=device,
+                )
 
-        next_observation_tensor = torch.as_tensor(next_observation, dtype=torch.float32, device=device,)
+                with torch.no_grad():
+                    next_value = policy.get_value(next_observation)
 
-        with torch.no_grad():
-            next_value = policy.get_value(next_observation_tensor)
+                buffers[agent].add(
+                    observation=transition.observation,
+                    action_mask=transition.action_mask,
+                    action=transition.action,
+                    log_prob=transition.log_prob,
+                    reward=transition.discounted_reward,
+                    value=transition.value,
+                    next_value=next_value,
+                    duration=transition.duration,
+                    terminated=terminated.get(agent, False),
+                    truncated=truncated.get(agent, False),
+                )
 
-        buffer.add(
-            observation=observation_tensor,
-            action=action,
-            log_prob=log_prob,
-            reward=reward,
-            value=value,
-            next_value=next_value,
-            terminated=terminated,
-            truncated=truncated,
-        )
+                del pending[agent]
 
-        if terminated or truncated:
-            observation, _ = env.reset()
-        else:
-            observation = next_observation
+        # Reward đang là team reward và giống nhau cho 5 agent.
+        # Không được sum rewards.values(), nếu không score bị nhân 5.
+        team_return += float(rewards["blue_agent_0"])
 
-    return buffer.build(gamma = gamma, gae_lambda = gae_lambda), observation
+        if episode_done:
+            break
+
+        observations = next_observations
+        infos = next_infos
+
+    agent_batches = [
+        buffers[agent].build(
+            gamma=gamma,
+            gae_lambda=gae_lambda,
+            reward_scale=reward_scale,
+            )
+            for agent in env.possible_agents
+        ]
+
+    combined_batch = concatenate_batches(agent_batches)
+
+    return combined_batch, team_return, simulator_steps
+
+def concatenate_batches(batches):
+    return RolloutBatch(
+        observations=torch.cat([b.observations for b in batches]),
+        action_masks=torch.cat([b.action_masks for b in batches]),
+        actions=torch.cat([b.actions for b in batches]),
+        old_log_probs=torch.cat([b.old_log_probs for b in batches]),
+        rewards=torch.cat([b.rewards for b in batches]),
+        values=torch.cat([b.values for b in batches]),
+        next_values=torch.cat([b.next_values for b in batches]),
+        durations=torch.cat([b.durations for b in batches]),
+        terminated=torch.cat([b.terminated for b in batches]),
+        truncated=torch.cat([b.truncated for b in batches]),
+        advantages=torch.cat([b.advantages for b in batches]),
+        returns=torch.cat([b.returns for b in batches]),
+    )
 
 if __name__ == "__main__":
-    from acd_benchmark.cyber.action_space import ACTION_SPACE
-    from acd_benchmark.cyber.blue_table_env import BlueTableEnv
-    from acd_benchmark.rl.policies.flat import FlatActorCritic
-    
-    env = BlueTableEnv()
-
-    policy = FlatActorCritic(
-        num_actions=len(ACTION_SPACE),
-    )
-
-    initial_observation, reset_result = env.reset(seed=123)
-
-    batch, next_observation = collect_rollout(
-        env=env,
-        policy=policy,
-        initial_observation=initial_observation,
-        rollout_steps=128,
-    )
-
-    print(batch.observations.shape)   # (128, 13, 4)
-    print(batch.actions.shape)        # (128,)
-    print(batch.old_log_probs.shape)  # (128,)
-    print(batch.advantages.shape)     # (128,)
-    print(batch.returns.shape)        # (128,) 
+    pass
