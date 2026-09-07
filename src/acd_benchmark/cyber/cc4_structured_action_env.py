@@ -5,7 +5,7 @@ import re
 import numpy as np
 from gymnasium.spaces import Discrete
 
-from acd_benchmark.cyber.canonical_observation import (
+from acd_benchmark.cyber.observation_schema import (
     AGENT_SUBNETS,
     MAX_SERVERS,
     MAX_SUBNETS_PER_AGENT,
@@ -44,9 +44,7 @@ def _hostnames(agent: str) -> list[str | None]:
         hostnames.extend(
             f"{subnet}_server_host_{index}" for index in range(MAX_SERVERS)
         )
-        hostnames.extend(
-            f"{subnet}_user_host_{index}" for index in range(MAX_USERS)
-        )
+        hostnames.extend(f"{subnet}_user_host_{index}" for index in range(MAX_USERS))
     return hostnames
 
 
@@ -59,9 +57,7 @@ def _edge_slots(agent: str) -> list[tuple[str, str] | None]:
             continue
         destination = controlled_subnets[local_slot]
         edges.extend(
-            (source, destination)
-            for source in SUBNETS
-            if source != destination
+            (source, destination) for source in SUBNETS if source != destination
         )
     return edges
 
@@ -73,9 +69,7 @@ def structured_action_keys(agent: str) -> list[tuple]:
         for hostname in _hostnames(agent)
     ]
     keys.extend(
-        ("edge", action, edge)
-        for action in EDGE_ACTIONS
-        for edge in _edge_slots(agent)
+        ("edge", action, edge) for action in EDGE_ACTIONS for edge in _edge_slots(agent)
     )
     keys.extend(("global", action) for action in GLOBAL_ACTIONS)
     if len(keys) != NUM_STRUCTURED_ACTIONS:
@@ -133,8 +127,7 @@ class CC4StructuredActionEnv:
         self.possible_agents = env.possible_agents
         self._action_space = Discrete(NUM_STRUCTURED_ACTIONS)
         self._keys = {
-            agent: structured_action_keys(agent)
-            for agent in self.possible_agents
+            agent: structured_action_keys(agent) for agent in self.possible_agents
         }
         self._labels = {
             agent: [structured_action_label(key) for key in self._keys[agent]]
@@ -190,8 +183,7 @@ class CC4StructuredActionEnv:
     def reset(self, seed: int | None = None):
         observations, infos = self.env.reset(seed=seed)
         self._structured_to_native = {
-            agent: self._build_mapping(agent)
-            for agent in self.possible_agents
+            agent: self._build_mapping(agent) for agent in self.possible_agents
         }
         return observations, self._transform_infos(infos)
 
@@ -205,9 +197,7 @@ class CC4StructuredActionEnv:
                 raise ValueError(
                     f"Structured action {action_id} is invalid for {agent}"
                 )
-            native_actions[agent] = int(
-                self._structured_to_native[agent][action_id]
-            )
+            native_actions[agent] = int(self._structured_to_native[agent][action_id])
 
         observations, rewards, terminated, truncated, infos = self.env.step(
             native_actions

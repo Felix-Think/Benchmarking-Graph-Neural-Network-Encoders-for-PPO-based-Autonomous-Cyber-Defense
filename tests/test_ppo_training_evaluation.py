@@ -3,12 +3,38 @@ import math
 import numpy as np
 import torch
 
-from acd_benchmark.rl.policies.flat import FlatActorCritic
+from acd_benchmark.rl.policies.actor_critic import CategoricalActorCritic
 from acd_benchmark.rl.ppo.evaluation import (
     evaluate_policy,
     load_policy_checkpoint,
 )
 from acd_benchmark.rl.ppo.training import PPOTrainingConfig, train_policy
+
+
+class TinyPolicy(CategoricalActorCritic):
+    """Small test-only network; exercises PPO without the simulator."""
+
+    def __init__(
+        self,
+        observation_dim,
+        num_actions,
+        encoder_hidden_dim,
+        latent_dim,
+        head_hidden_dim,
+    ):
+        super().__init__()
+        self.encoder = torch.nn.Sequential(
+            torch.nn.Linear(observation_dim, encoder_hidden_dim),
+            torch.nn.ReLU(),
+            torch.nn.Linear(encoder_hidden_dim, latent_dim),
+            torch.nn.ReLU(),
+        )
+        self.actor = torch.nn.Linear(latent_dim, num_actions)
+        self.critic = torch.nn.Linear(latent_dim, 1)
+
+    def forward(self, observation):
+        latent = self.encoder(observation)
+        return self.actor(latent), self.critic(latent)
 
 
 class TinyEpisodeEnv:
@@ -21,8 +47,7 @@ class TinyEpisodeEnv:
     def reset(self, seed=None):
         self.step_count = 0
         observations = {
-            agent: np.zeros(4, dtype=np.float32)
-            for agent in self.possible_agents
+            agent: np.zeros(4, dtype=np.float32) for agent in self.possible_agents
         }
         infos = {
             agent: {
@@ -44,8 +69,7 @@ class TinyEpisodeEnv:
         rewards = {agent: 1.0 for agent in self.possible_agents}
         terminated = {agent: False for agent in self.possible_agents}
         truncated = {
-            agent: self.step_count >= self.horizon
-            for agent in self.possible_agents
+            agent: self.step_count >= self.horizon for agent in self.possible_agents
         }
         infos = {
             agent: {
@@ -64,7 +88,7 @@ class TinyEpisodeEnv:
 def test_train_policy_tracks_updates_episodes_and_checkpoint(tmp_path):
     torch.manual_seed(0)
     env = TinyEpisodeEnv(horizon=3)
-    policy = FlatActorCritic(
+    policy = TinyPolicy(
         observation_dim=4,
         num_actions=2,
         encoder_hidden_dim=8,
@@ -93,7 +117,7 @@ def test_train_policy_tracks_updates_episodes_and_checkpoint(tmp_path):
             if isinstance(value, float):
                 assert math.isfinite(value), name
 
-    restored_policy = FlatActorCritic(
+    restored_policy = TinyPolicy(
         observation_dim=4,
         num_actions=2,
         encoder_hidden_dim=8,
@@ -115,7 +139,7 @@ def test_train_policy_tracks_updates_episodes_and_checkpoint(tmp_path):
 def test_train_policy_combines_multiple_complete_episodes_per_update():
     torch.manual_seed(0)
     env = TinyEpisodeEnv(horizon=3)
-    policy = FlatActorCritic(
+    policy = TinyPolicy(
         observation_dim=4,
         num_actions=2,
         encoder_hidden_dim=8,
@@ -143,7 +167,7 @@ def test_train_policy_combines_multiple_complete_episodes_per_update():
 def test_evaluate_policy_reports_returns_lengths_and_actions():
     torch.manual_seed(0)
     env = TinyEpisodeEnv(horizon=3)
-    policy = FlatActorCritic(
+    policy = TinyPolicy(
         observation_dim=4,
         num_actions=2,
         encoder_hidden_dim=8,

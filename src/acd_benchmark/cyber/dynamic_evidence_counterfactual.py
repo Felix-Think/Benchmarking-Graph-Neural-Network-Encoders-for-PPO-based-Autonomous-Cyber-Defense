@@ -2,25 +2,13 @@ from __future__ import annotations
 
 import numpy as np
 
-from acd_benchmark.cyber.canonical_observation import NUM_NODES
-from acd_benchmark.cyber.canonical_observation_v2 import (
+from acd_benchmark.cyber.observation_schema import NUM_NODES
+from acd_benchmark.cyber.observation_schema import (
     PASSIVE_MEMORY_FEATURES,
     PASSIVE_NOW_FEATURES,
 )
 
 EVIDENCE_NODE_FEATURES = (
-    "observed_now",
-    "process_event_now",
-    "connection_event_now",
-    "analysis_result_now",
-    "max_file_density_now",
-    "process_event_memory",
-    "connection_event_memory",
-    "analysis_memory",
-    "max_file_density_memory",
-    "evidence_age_normalized",
-)
-V2_EVIDENCE_NODE_FEATURES = (
     "observed_now",
     *PASSIVE_NOW_FEATURES,
     *PASSIVE_MEMORY_FEATURES,
@@ -29,14 +17,11 @@ V2_EVIDENCE_NODE_FEATURES = (
     "max_file_density_now",
     "max_file_density_memory",
 )
-ALL_EVIDENCE_NODE_FEATURES = tuple(
-    dict.fromkeys((*EVIDENCE_NODE_FEATURES, *V2_EVIDENCE_NODE_FEATURES))
-)
 COUNTERFACTUAL_TRANSFORMS = ("shuffle_hosts", "time_shift", "zero_evidence")
 
 
 class DynamicEvidenceCounterfactual:
-    """Apply a paired counterfactual to canonical-v1 host evidence features."""
+    """Apply a paired counterfactual to current canonical host evidence features."""
 
     def __init__(
         self,
@@ -60,9 +45,7 @@ class DynamicEvidenceCounterfactual:
             if required not in self._feature_index:
                 raise ValueError(f"Canonical schema is missing {required!r}")
         self.evidence_node_features = tuple(
-            name
-            for name in ALL_EVIDENCE_NODE_FEATURES
-            if name in self._feature_index
+            name for name in EVIDENCE_NODE_FEATURES if name in self._feature_index
         )
         if not self.evidence_node_features:
             raise ValueError("Canonical schema exposes no recognized evidence features")
@@ -115,9 +98,7 @@ class DynamicEvidenceCounterfactual:
         observation: np.ndarray,
     ) -> np.ndarray:
         transformed = np.asarray(observation, dtype=np.float32).copy()
-        nodes = transformed[
-            : NUM_NODES * len(self.node_feature_names)
-        ].reshape(
+        nodes = transformed[: NUM_NODES * len(self.node_feature_names)].reshape(
             NUM_NODES,
             len(self.node_feature_names),
         )
@@ -137,9 +118,7 @@ class DynamicEvidenceCounterfactual:
                 nodes[np.ix_(host_nodes, self._evidence_indices)] = 0.0
             else:
                 delayed = history[-self.time_shift_lag]
-                nodes[np.ix_(host_nodes, self._evidence_indices)] = delayed[
-                    host_nodes
-                ]
+                nodes[np.ix_(host_nodes, self._evidence_indices)] = delayed[host_nodes]
             history.append(current_evidence)
 
         return transformed

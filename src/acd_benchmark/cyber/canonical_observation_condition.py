@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import numpy as np
 
-from acd_benchmark.cyber.canonical_observation import (
+from acd_benchmark.cyber.observation_schema import (
     MAX_LOCAL_HOSTS,
     NUM_NODES,
     NUM_SUBNET_NODES,
 )
-from acd_benchmark.cyber.canonical_observation_v2 import (
+from acd_benchmark.cyber.observation_schema import (
     PASSIVE_MEMORY_FEATURES,
     PASSIVE_NOW_FEATURES,
 )
@@ -33,18 +33,7 @@ STATIC_NODE_FEATURES = (
 # These are sensor outputs or beliefs derived from sensor outputs. Analyse
 # completion/history is deliberately excluded: it is action feedback, while
 # file density is the information returned by that action.
-V1_SENSOR_EVIDENCE_FEATURES = (
-    "observed_now",
-    "process_event_now",
-    "connection_event_now",
-    "max_file_density_now",
-    "process_event_memory",
-    "connection_event_memory",
-    "max_file_density_memory",
-    "evidence_age_normalized",
-)
-
-V2_SENSOR_EVIDENCE_FEATURES = (
+SENSOR_EVIDENCE_FEATURES = (
     "observed_now",
     *PASSIVE_NOW_FEATURES,
     *PASSIVE_MEMORY_FEATURES,
@@ -86,10 +75,7 @@ class CanonicalObservationCondition:
         self._firewall_start = self._communication_start + self._matrix_size
         self._global_start = self._firewall_start + self._matrix_size
 
-        sensor_candidates = (
-            set(V1_SENSOR_EVIDENCE_FEATURES)
-            | set(V2_SENSOR_EVIDENCE_FEATURES)
-        )
+        sensor_candidates = set(SENSOR_EVIDENCE_FEATURES)
         self._sensor_indices = np.asarray(
             [
                 index
@@ -165,12 +151,8 @@ class CanonicalObservationCondition:
             ].copy()
             transformed.fill(0.0)
             self._nodes(transformed)[:, self._static_indices] = static_nodes
-            transformed[
-                self._membership_start : self._structural_start
-            ] = membership
-            transformed[
-                self._structural_start : self._communication_start
-            ] = structural
+            transformed[self._membership_start : self._structural_start] = membership
+            transformed[self._structural_start : self._communication_start] = structural
             return transformed
 
         raise AssertionError(f"Unhandled observation condition: {self.condition}")

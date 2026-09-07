@@ -14,286 +14,119 @@ from CybORG.Simulator.Actions.ConcreteActions.DecoyActions.DeployDecoy import (
     DeployDecoy,
 )
 
-
-SUBNETS = (
-    "admin_network_subnet",
-    "contractor_network_subnet",
-    "internet_subnet",
-    "office_network_subnet",
-    "operational_zone_a_subnet",
-    "operational_zone_b_subnet",
-    "public_access_zone_subnet",
-    "restricted_zone_a_subnet",
-    "restricted_zone_b_subnet",
+from acd_benchmark.cyber.observation_schema import (
+    AGENT_SUBNETS,
+    CURRENT_FEATURES,
+    FEATURE_INDEX,
+    GLOBAL_FEATURES,
+    MAX_EVENT_COUNT,
+    MAX_HOSTS_PER_SUBNET,
+    MAX_LOCAL_HOSTS,
+    MAX_SERVERS,
+    NODE_FEATURES,
+    NUM_NODES,
+    NUM_SUBNET_NODES,
+    PASSIVE_MEMORY_FEATURES,
+    PASSIVE_NOW_FEATURES,
+    RELATIONAL_EVENT_NOW_FEATURES,
+    SUBNET_INDEX,
+    SUBNETS,
+    VALID_VARIANTS,
+    CanonicalObservation,
 )
-SUBNET_INDEX = {name: index for index, name in enumerate(SUBNETS)}
-
-AGENT_SUBNETS = {
-    "blue_agent_0": ("restricted_zone_a_subnet",),
-    "blue_agent_1": ("operational_zone_a_subnet",),
-    "blue_agent_2": ("restricted_zone_b_subnet",),
-    "blue_agent_3": ("operational_zone_b_subnet",),
-    "blue_agent_4": (
-        "admin_network_subnet",
-        "office_network_subnet",
-        "public_access_zone_subnet",
-    ),
-}
-
-MAX_SUBNETS_PER_AGENT = 3
-MAX_SERVERS = 6
-MAX_USERS = 10
-MAX_HOSTS_PER_SUBNET = MAX_SERVERS + MAX_USERS
-MAX_LOCAL_HOSTS = MAX_SUBNETS_PER_AGENT * MAX_HOSTS_PER_SUBNET
-NUM_SUBNET_NODES = len(SUBNETS)
-NUM_NODES = NUM_SUBNET_NODES + MAX_LOCAL_HOSTS
-
-NODE_FEATURES = (
-    "exists",
-    "is_subnet",
-    "is_host",
-    "is_user",
-    "is_server",
-    "controlled",
-    "observed_now",
-    "process_event_now",
-    "connection_event_now",
-    "analysis_result_now",
-    "max_file_density_now",
-    "process_event_memory",
-    "connection_event_memory",
-    "analysis_memory",
-    "max_file_density_memory",
-    "decoy_active",
-    "evidence_age_normalized",
+from acd_benchmark.cyber.topology import (
+    desired_communication_adjacency,
+    mission_phase,
+    structural_subnet_adjacency,
 )
-FEATURE_INDEX = {name: index for index, name in enumerate(NODE_FEATURES)}
-
-GLOBAL_FEATURES = (
-    "mission_phase_0",
-    "mission_phase_1",
-    "mission_phase_2",
-    "success_unknown",
-    "success_false",
-    "success_true",
-    "success_in_progress",
-)
-
-VALID_VARIANTS = ("instant", "belief", "action_aware")
 
 
 @dataclass(frozen=True)
-class CanonicalObservation:
-    node_features: np.ndarray
-    host_membership: np.ndarray
-    structural_adjacency: np.ndarray
-    communication_policy: np.ndarray
-    firewall_blocks: np.ndarray
-    global_features: np.ndarray
+class ObservedHostEventDetails:
+    process_count: int = 0
+    process_has_pid: bool = False
+    process_has_connection: bool = False
+    connection_count: int = 0
+    connection_has_remote_address: bool = False
+    connection_has_remote_port: bool = False
+    connection_has_pid: bool = False
+    relational_values: tuple[float, ...] = (0.0,) * len(RELATIONAL_EVENT_NOW_FEATURES)
 
-    def flat_view(self) -> np.ndarray:
-        return np.concatenate(
-            (
-                self.node_features.reshape(-1),
-                self.host_membership.reshape(-1),
-                self.structural_adjacency.reshape(-1),
-                self.communication_policy.reshape(-1),
-                self.firewall_blocks.reshape(-1),
-                self.global_features.reshape(-1),
+    @property
+    def has_passive_event(self) -> bool:
+        return self.process_count > 0 or self.connection_count > 0
+
+    def normalized_values(self) -> np.ndarray:
+        if len(self.relational_values) != len(RELATIONAL_EVENT_NOW_FEATURES):
+            raise ValueError(
+                "relational_values must match RELATIONAL_EVENT_NOW_FEATURES"
             )
-        ).astype(np.float32, copy=False)
-
-    def graph_edge_index(self) -> np.ndarray:
-        sources: list[int] = []
-        destinations: list[int] = []
-
-        host_rows, subnet_columns = np.nonzero(self.host_membership)
-        for host_row, subnet_column in zip(host_rows, subnet_columns, strict=True):
-            host_node = NUM_SUBNET_NODES + int(host_row)
-            subnet_node = int(subnet_column)
-            sources.extend((host_node, subnet_node))
-            destinations.extend((subnet_node, host_node))
-
-        subnet_sources, subnet_destinations = np.nonzero(self.structural_adjacency)
-        sources.extend(subnet_sources.tolist())
-        destinations.extend(subnet_destinations.tolist())
-        return np.asarray((sources, destinations), dtype=np.int64)
-
-
-def flat_observation_dim() -> int:
-    return (
-        NUM_NODES * len(NODE_FEATURES)
-        + MAX_LOCAL_HOSTS * NUM_SUBNET_NODES
-        + 3 * NUM_SUBNET_NODES * NUM_SUBNET_NODES
-        + len(GLOBAL_FEATURES)
-    )
-
-
-def deserialize_flat_view(flat: np.ndarray) -> CanonicalObservation:
-    flat = np.asarray(flat, dtype=np.float32)
-    node_size = NUM_NODES * len(NODE_FEATURES)
-    membership_size = MAX_LOCAL_HOSTS * NUM_SUBNET_NODES
-    matrix_size = NUM_SUBNET_NODES * NUM_SUBNET_NODES
-    expected = flat_observation_dim()
-    if flat.shape != (expected,):
-        raise ValueError(f"Expected flat shape ({expected},), received {flat.shape}")
-
-    cursor = 0
-    node_features = flat[cursor : cursor + node_size].reshape(
-        NUM_NODES, len(NODE_FEATURES)
-    )
-    cursor += node_size
-    host_membership = flat[cursor : cursor + membership_size].reshape(
-        MAX_LOCAL_HOSTS, NUM_SUBNET_NODES
-    )
-    cursor += membership_size
-    structural_adjacency = flat[cursor : cursor + matrix_size].reshape(
-        NUM_SUBNET_NODES, NUM_SUBNET_NODES
-    )
-    cursor += matrix_size
-    communication_policy = flat[cursor : cursor + matrix_size].reshape(
-        NUM_SUBNET_NODES, NUM_SUBNET_NODES
-    )
-    cursor += matrix_size
-    firewall_blocks = flat[cursor : cursor + matrix_size].reshape(
-        NUM_SUBNET_NODES, NUM_SUBNET_NODES
-    )
-    cursor += matrix_size
-    return CanonicalObservation(
-        node_features=node_features,
-        host_membership=host_membership,
-        structural_adjacency=structural_adjacency,
-        communication_policy=communication_policy,
-        firewall_blocks=firewall_blocks,
-        global_features=flat[cursor:],
-    )
-
-
-def mission_phase(step: int, episode_steps: int) -> int:
-    # CAGE 4 evaluates the phase using its pre-increment simulator step.
-    schedule_step = max(step - 1, 0)
-    quotient, remainder = divmod(episode_steps, 3)
-    lengths = [quotient, quotient, quotient]
-    for index in range(remainder):
-        lengths[index] += 1
-    if schedule_step < lengths[0]:
-        return 0
-    if schedule_step < lengths[0] + lengths[1]:
-        return 1
-    return 2
-
-
-def structural_subnet_adjacency() -> np.ndarray:
-    """Return the fixed physical router-level topology of CAGE 4."""
-    adjacency = np.zeros((NUM_SUBNET_NODES, NUM_SUBNET_NODES), dtype=np.float32)
-    edges = (
-        ("internet_subnet", "restricted_zone_a_subnet"),
-        ("internet_subnet", "restricted_zone_b_subnet"),
-        ("internet_subnet", "contractor_network_subnet"),
-        ("internet_subnet", "public_access_zone_subnet"),
-        ("restricted_zone_a_subnet", "operational_zone_a_subnet"),
-        ("restricted_zone_b_subnet", "operational_zone_b_subnet"),
-        ("public_access_zone_subnet", "admin_network_subnet"),
-        ("public_access_zone_subnet", "office_network_subnet"),
-    )
-    for source, destination in edges:
-        adjacency[SUBNET_INDEX[source], SUBNET_INDEX[destination]] = 1.0
-        adjacency[SUBNET_INDEX[destination], SUBNET_INDEX[source]] = 1.0
-    return adjacency
-
-
-def desired_communication_adjacency(phase: int) -> np.ndarray:
-    """Return the public mission policy, where one means communication is desired."""
-    adjacency = np.zeros((NUM_SUBNET_NODES, NUM_SUBNET_NODES), dtype=np.float32)
-    lan = (
-        "internet_subnet",
-        "admin_network_subnet",
-        "office_network_subnet",
-        "public_access_zone_subnet",
-        "contractor_network_subnet",
-        "restricted_zone_a_subnet",
-        "restricted_zone_b_subnet",
-    )
-    for source in lan:
-        for destination in lan:
-            if source != destination:
-                adjacency[SUBNET_INDEX[source], SUBNET_INDEX[destination]] = 1.0
-
-    for source, destination in (
-        ("restricted_zone_a_subnet", "operational_zone_a_subnet"),
-        ("restricted_zone_b_subnet", "operational_zone_b_subnet"),
-    ):
-        adjacency[SUBNET_INDEX[source], SUBNET_INDEX[destination]] = 1.0
-        adjacency[SUBNET_INDEX[destination], SUBNET_INDEX[source]] = 1.0
-
-    removed = ()
-    if phase == 1:
-        removed = (
-            ("restricted_zone_a_subnet", "operational_zone_a_subnet"),
-            ("restricted_zone_a_subnet", "contractor_network_subnet"),
-            ("restricted_zone_a_subnet", "restricted_zone_b_subnet"),
-            ("restricted_zone_a_subnet", "internet_subnet"),
+        return np.asarray(
+            (
+                min(self.process_count, MAX_EVENT_COUNT) / MAX_EVENT_COUNT,
+                float(self.process_has_pid),
+                float(self.process_has_connection),
+                min(self.connection_count, MAX_EVENT_COUNT) / MAX_EVENT_COUNT,
+                float(self.connection_has_remote_address),
+                float(self.connection_has_remote_port),
+                float(self.connection_has_pid),
+                *self.relational_values,
+            ),
+            dtype=np.float32,
         )
-    elif phase == 2:
-        removed = (
-            ("restricted_zone_b_subnet", "operational_zone_b_subnet"),
-            ("restricted_zone_b_subnet", "contractor_network_subnet"),
-            ("restricted_zone_b_subnet", "restricted_zone_a_subnet"),
-            ("restricted_zone_b_subnet", "internet_subnet"),
-        )
-    for source, destination in removed:
-        adjacency[SUBNET_INDEX[source], SUBNET_INDEX[destination]] = 0.0
-        adjacency[SUBNET_INDEX[destination], SUBNET_INDEX[source]] = 0.0
-    return adjacency
-
-
-@dataclass(frozen=True)
-class ObservedHostEvents:
-    """Binary event indicators exposed by CAGE 4's automatic Monitor action."""
-
-    process_creation: bool = False
-    network_connection: bool = False
 
 
 class HostCompressedBuilder:
-    """Build a fixed graph from Blue-visible evidence and public CAGE 4 rules."""
+    """Build typed observable alerts and bounded memories for one Blue agent."""
 
     def __init__(
         self,
         agent: str,
         episode_steps: int,
         variant: str = "action_aware",
-        evidence_age_horizon: int = 50,
+        passive_memory_ttl: int = 20,
+        analysis_memory_ttl: int = 20,
     ):
         if agent not in AGENT_SUBNETS:
             raise ValueError(f"Unknown Blue agent: {agent}")
         if variant not in VALID_VARIANTS:
             raise ValueError(f"variant must be one of {VALID_VARIANTS}")
-        if evidence_age_horizon <= 0:
-            raise ValueError("evidence_age_horizon must be positive")
+        if passive_memory_ttl <= 0 or analysis_memory_ttl <= 0:
+            raise ValueError("V2 memory TTL values must be positive")
         self.agent = agent
         self.episode_steps = episode_steps
         self.variant = variant
-        self.evidence_age_horizon = evidence_age_horizon
-        self.node_features = np.zeros(
-            (NUM_NODES, len(NODE_FEATURES)), dtype=np.float32
-        )
+        self.passive_memory_ttl = passive_memory_ttl
+        self.analysis_memory_ttl = analysis_memory_ttl
+        self.node_features = np.zeros((NUM_NODES, len(NODE_FEATURES)), dtype=np.float32)
         self.host_membership = np.zeros(
             (MAX_LOCAL_HOSTS, NUM_SUBNET_NODES), dtype=np.float32
         )
         self.firewall_blocked_edges: set[tuple[str, str]] = set()
-        self._age_steps = np.zeros(NUM_NODES, dtype=np.int32)
+        self._passive_memory = np.zeros(
+            (NUM_NODES, len(PASSIVE_NOW_FEATURES)), dtype=np.float32
+        )
+        self._passive_age = np.zeros(NUM_NODES, dtype=np.int32)
+        self._passive_active = np.zeros(NUM_NODES, dtype=np.bool_)
+        self._analysis_density = np.zeros(NUM_NODES, dtype=np.float32)
+        self._analysis_age = np.zeros(NUM_NODES, dtype=np.int32)
+        self._analysis_active = np.zeros(NUM_NODES, dtype=np.bool_)
 
     def reset(
         self,
         observation: dict,
-        event_indicators: dict[str, ObservedHostEvents] | None = None,
+        event_details: dict[str, ObservedHostEventDetails] | None = None,
     ) -> CanonicalObservation:
         self.node_features.fill(0.0)
         self.host_membership.fill(0.0)
         self.firewall_blocked_edges.clear()
-        self._age_steps.fill(0)
-        event_indicators = {} if event_indicators is None else event_indicators
+        self._passive_memory.fill(0.0)
+        self._passive_age.fill(0)
+        self._passive_active.fill(False)
+        self._analysis_density.fill(0.0)
+        self._analysis_age.fill(0)
+        self._analysis_active.fill(False)
+        event_details = {} if event_details is None else event_details
 
         for subnet, subnet_index in SUBNET_INDEX.items():
             self.node_features[subnet_index, FEATURE_INDEX["exists"]] = 1.0
@@ -310,21 +143,25 @@ class HostCompressedBuilder:
                 host_type = "is_server" if host_offset < MAX_SERVERS else "is_user"
                 self.node_features[node_index, FEATURE_INDEX[host_type]] = 1.0
 
-        for hostname in observation:
+        observed_hosts = {
+            hostname
+            for hostname in observation
+            if hostname not in ("success", "message", "action")
+        }
+        observed_hosts.update(
+            hostname
+            for hostname, details in event_details.items()
+            if details.has_passive_event
+        )
+        for hostname in observed_hosts:
             node_index = self._node_index(hostname)
             if node_index is None:
                 continue
-            self.node_features[node_index, FEATURE_INDEX["exists"]] = 1.0
-            self.node_features[node_index, FEATURE_INDEX["observed_now"]] = 1.0
-            if node_index >= NUM_SUBNET_NODES:
-                host_row = node_index - NUM_SUBNET_NODES
-                subnet = self._subnet_from_hostname(hostname)
-                self.host_membership[host_row, SUBNET_INDEX[subnet]] = 1.0
-
+            self._mark_host_exists(hostname, node_index)
             self._update_node(
                 node_index,
                 observation.get(hostname, {}),
-                event_indicators.get(hostname, ObservedHostEvents()),
+                event_details.get(hostname, ObservedHostEventDetails()),
             )
 
         return self._snapshot(observation, step=0)
@@ -333,33 +170,12 @@ class HostCompressedBuilder:
         self,
         observation: dict,
         step: int,
-        event_indicators: dict[str, ObservedHostEvents] | None = None,
+        event_details: dict[str, ObservedHostEventDetails] | None = None,
     ) -> CanonicalObservation:
-        event_indicators = {} if event_indicators is None else event_indicators
-        current_features = (
-            "observed_now",
-            "process_event_now",
-            "connection_event_now",
-            "analysis_result_now",
-            "max_file_density_now",
-        )
-        self.node_features[
-            :, [FEATURE_INDEX[feature] for feature in current_features]
-        ] = 0.0
-
+        event_details = {} if event_details is None else event_details
+        self.node_features[:, [FEATURE_INDEX[name] for name in CURRENT_FEATURES]] = 0.0
         if self.variant != "instant":
-            has_memory = (
-                self.node_features[
-                    :,
-                    [
-                        FEATURE_INDEX["process_event_memory"],
-                        FEATURE_INDEX["connection_event_memory"],
-                        FEATURE_INDEX["analysis_memory"],
-                    ],
-                ].max(axis=1)
-                > 0
-            )
-            self._age_steps[has_memory] += 1
+            self._advance_memories()
 
         success = observation.get("success", TernaryEnum.UNKNOWN)
         action = observation.get("action")
@@ -373,70 +189,78 @@ class HostCompressedBuilder:
         }
         observed_hosts.update(
             hostname
-            for hostname, indicators in event_indicators.items()
-            if indicators.process_creation or indicators.network_connection
+            for hostname, details in event_details.items()
+            if details.has_passive_event
         )
         for hostname in observed_hosts:
-            if hostname in ("success", "message", "action"):
-                continue
             node_index = self._node_index(hostname)
-            if node_index is not None:
-                self._update_node(
-                    node_index,
-                    observation.get(hostname, {}),
-                    event_indicators.get(hostname, ObservedHostEvents()),
-                )
+            if node_index is None:
+                continue
+            self._mark_host_exists(hostname, node_index)
+            self._update_node(
+                node_index,
+                observation.get(hostname, {}),
+                event_details.get(hostname, ObservedHostEventDetails()),
+            )
 
         return self._snapshot(observation, step)
+
+    def _mark_host_exists(self, hostname: str, node_index: int) -> None:
+        self.node_features[node_index, FEATURE_INDEX["exists"]] = 1.0
+        self.node_features[node_index, FEATURE_INDEX["observed_now"]] = 1.0
+        if node_index < NUM_SUBNET_NODES:
+            return
+        host_row = node_index - NUM_SUBNET_NODES
+        subnet = self._subnet_from_hostname(hostname)
+        self.host_membership[host_row, SUBNET_INDEX[subnet]] = 1.0
 
     def _update_node(
         self,
         node_index: int,
         host_data: dict,
-        event_indicators: ObservedHostEvents,
+        event_details: ObservedHostEventDetails,
     ) -> None:
-        process_now = event_indicators.process_creation
-        connection_now = event_indicators.network_connection
+        passive_values = event_details.normalized_values()
+        for feature, value in zip(PASSIVE_NOW_FEATURES, passive_values, strict=True):
+            self.node_features[node_index, FEATURE_INDEX[feature]] = value
+
         files = host_data.get("Files", [])
         densities = [
             float(file_data["Density"])
             for file_data in files
             if file_data.get("Density") is not None
         ]
-        max_density = max(densities, default=0.0)
-
-        values = {
-            "observed_now": 1.0,
-            "process_event_now": float(process_now),
-            "connection_event_now": float(connection_now),
-            "max_file_density_now": float(np.clip(max_density, 0.0, 1.0)),
-        }
-        for feature, value in values.items():
-            self.node_features[node_index, FEATURE_INDEX[feature]] = value
+        density = float(np.clip(max(densities, default=0.0), 0.0, 1.0))
+        self.node_features[node_index, FEATURE_INDEX["max_file_density_now"]] = density
 
         if self.variant == "instant":
             return
-        saw_evidence = False
-        for feature, active in (
-            ("process_event_memory", process_now),
-            ("connection_event_memory", connection_now),
-        ):
-            if active:
-                self.node_features[node_index, FEATURE_INDEX[feature]] = 1.0
-                saw_evidence = True
-        analysis_now = bool(
-            self.node_features[node_index, FEATURE_INDEX["analysis_result_now"]]
+        if event_details.has_passive_event:
+            self._passive_memory[node_index] = passive_values
+            self._passive_active[node_index] = True
+            self._passive_age[node_index] = 0
+
+        if self.node_features[node_index, FEATURE_INDEX["analyse_completed_now"]] > 0:
+            self._analysis_active[node_index] = True
+            self._analysis_age[node_index] = 0
+            self._analysis_density[node_index] = density
+
+    def _advance_memories(self) -> None:
+        self._passive_age[self._passive_active] += 1
+        passive_expired = self._passive_active & (
+            self._passive_age >= self.passive_memory_ttl
         )
-        if analysis_now:
-            self.node_features[node_index, FEATURE_INDEX["analysis_memory"]] = 1.0
-            density_memory_index = FEATURE_INDEX["max_file_density_memory"]
-            self.node_features[node_index, density_memory_index] = max(
-                self.node_features[node_index, density_memory_index],
-                values["max_file_density_now"],
-            )
-            saw_evidence = True
-        if saw_evidence:
-            self._age_steps[node_index] = 0
+        self._passive_active[passive_expired] = False
+        self._passive_age[passive_expired] = 0
+        self._passive_memory[passive_expired] = 0.0
+
+        self._analysis_age[self._analysis_active] += 1
+        analysis_expired = self._analysis_active & (
+            self._analysis_age >= self.analysis_memory_ttl
+        )
+        self._analysis_active[analysis_expired] = False
+        self._analysis_age[analysis_expired] = 0
+        self._analysis_density[analysis_expired] = 0.0
 
     def _apply_successful_action(self, action) -> None:
         if isinstance(action, BlockTrafficZone):
@@ -448,40 +272,69 @@ class HostCompressedBuilder:
         node_index = self._node_index(target) if target is not None else None
         if isinstance(action, Analyse) and node_index is not None:
             self.node_features[node_index, FEATURE_INDEX["observed_now"]] = 1.0
-            self.node_features[node_index, FEATURE_INDEX["analysis_result_now"]] = 1.0
+            self.node_features[node_index, FEATURE_INDEX["analyse_completed_now"]] = 1.0
             if self.variant != "instant":
-                self.node_features[node_index, FEATURE_INDEX["analysis_memory"]] = 1.0
-                self._age_steps[node_index] = 0
+                self._analysis_active[node_index] = True
+                self._analysis_age[node_index] = 0
 
-        if self.variant != "action_aware" or action is None:
+        if self.variant != "action_aware" or node_index is None:
             return
-        if node_index is None:
-            return
-
-        # Remove intentionally has no branch: success does not prove the host is clean.
         if isinstance(action, Restore):
-            for feature in (
-                "process_event_memory",
-                "connection_event_memory",
-                "analysis_memory",
-                "max_file_density_memory",
-                "decoy_active",
-            ):
-                self.node_features[node_index, FEATURE_INDEX[feature]] = 0.0
-            self._age_steps[node_index] = 0
+            self._clear_host_memory(node_index)
+            self.node_features[node_index, FEATURE_INDEX["decoy_active"]] = 0.0
         elif isinstance(action, DeployDecoy):
             self.node_features[node_index, FEATURE_INDEX["decoy_active"]] = 1.0
 
+    def _clear_host_memory(self, node_index: int) -> None:
+        self._passive_memory[node_index] = 0.0
+        self._passive_age[node_index] = 0
+        self._passive_active[node_index] = False
+        self._analysis_density[node_index] = 0.0
+        self._analysis_age[node_index] = 0
+        self._analysis_active[node_index] = False
+
     def _snapshot(self, observation: dict, step: int) -> CanonicalObservation:
+        memory_indices = [FEATURE_INDEX[name] for name in PASSIVE_MEMORY_FEATURES]
+        self.node_features[:, memory_indices] = 0.0
+        self.node_features[:, FEATURE_INDEX["passive_memory_active"]] = (
+            self._passive_active.astype(np.float32)
+        )
+        self.node_features[:, FEATURE_INDEX["passive_memory_age_normalized"]] = 0.0
         if self.variant != "instant":
-            ages = np.minimum(
-                self._age_steps / float(self.evidence_age_horizon), 1.0
+            passive_decay = np.zeros(NUM_NODES, dtype=np.float32)
+            passive_decay[self._passive_active] = 1.0 - (
+                self._passive_age[self._passive_active] / float(self.passive_memory_ttl)
             )
-            self.node_features[:, FEATURE_INDEX["evidence_age_normalized"]] = ages
+            self.node_features[:, memory_indices] = (
+                self._passive_memory * passive_decay[:, None]
+            )
+            self.node_features[
+                self._passive_active,
+                FEATURE_INDEX["passive_memory_age_normalized"],
+            ] = self._passive_age[self._passive_active] / float(self.passive_memory_ttl)
+
+        self.node_features[:, FEATURE_INDEX["analyse_memory_active"]] = (
+            self._analysis_active.astype(np.float32)
+        )
+        self.node_features[:, FEATURE_INDEX["max_file_density_memory"]] = 0.0
+        self.node_features[:, FEATURE_INDEX["analyse_memory_age_normalized"]] = 0.0
+        if self.variant != "instant":
+            analysis_decay = np.zeros(NUM_NODES, dtype=np.float32)
+            analysis_decay[self._analysis_active] = 1.0 - (
+                self._analysis_age[self._analysis_active]
+                / float(self.analysis_memory_ttl)
+            )
+            self.node_features[:, FEATURE_INDEX["max_file_density_memory"]] = (
+                self._analysis_density * analysis_decay
+            )
+            self.node_features[
+                self._analysis_active,
+                FEATURE_INDEX["analyse_memory_age_normalized"],
+            ] = self._analysis_age[self._analysis_active] / float(
+                self.analysis_memory_ttl
+            )
 
         phase = mission_phase(step, self.episode_steps)
-        structural_adjacency = structural_subnet_adjacency()
-        communication_policy = desired_communication_adjacency(phase)
         firewall_blocks = np.zeros(
             (NUM_SUBNET_NODES, NUM_SUBNET_NODES), dtype=np.float32
         )
@@ -508,8 +361,8 @@ class HostCompressedBuilder:
         return CanonicalObservation(
             node_features=self.node_features.copy(),
             host_membership=self.host_membership.copy(),
-            structural_adjacency=structural_adjacency,
-            communication_policy=communication_policy,
+            structural_adjacency=structural_subnet_adjacency(),
+            communication_policy=desired_communication_adjacency(phase),
             firewall_blocks=firewall_blocks,
             global_features=global_features,
         )

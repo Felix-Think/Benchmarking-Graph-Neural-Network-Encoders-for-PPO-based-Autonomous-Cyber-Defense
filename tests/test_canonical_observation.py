@@ -1,231 +1,275 @@
 import numpy as np
+import pytest
 
 from CybORG.Shared.Enums import TernaryEnum
-from CybORG.Simulator.Actions.AbstractActions import Analyse, Remove, Restore
+from CybORG.Simulator.Actions.AbstractActions import Analyse, Restore
 from CybORG.Simulator.Actions.ConcreteActions.ControlTraffic import (
     AllowTrafficZone,
     BlockTrafficZone,
 )
-from CybORG.Simulator.Actions.ConcreteActions.DecoyActions.DeployDecoy import (
-    DeployDecoy,
-)
 
-from acd_benchmark.cyber.canonical_observation import (
-    FEATURE_INDEX,
+from acd_benchmark.cyber.observation_schema import (
     MAX_SERVERS,
     NUM_SUBNET_NODES,
-    SUBNET_INDEX,
-    HostCompressedBuilder,
-    ObservedHostEvents,
-    deserialize_flat_view,
+    RELATIONAL_EVENT_NOW_FEATURES,
+    FEATURE_INDEX,
     flat_observation_dim,
 )
+from acd_benchmark.cyber.canonical_observation import (
+    HostCompressedBuilder,
+    ObservedHostEventDetails,
+)
+from acd_benchmark.cyber.cc4_canonical_env import CC4CanonicalFlatEnv
 
 
 AGENT = "blue_agent_0"
 HOST = "restricted_zone_a_subnet_user_host_0"
 ROUTER = "restricted_zone_a_subnet_router"
 HOST_NODE = NUM_SUBNET_NODES + MAX_SERVERS
-RESTRICTED_A = SUBNET_INDEX["restricted_zone_a_subnet"]
-OPERATIONAL_A = SUBNET_INDEX["operational_zone_a_subnet"]
-ADMIN = SUBNET_INDEX["admin_network_subnet"]
-OFFICE = SUBNET_INDEX["office_network_subnet"]
 
 
 def _builder() -> HostCompressedBuilder:
-    builder = HostCompressedBuilder(
+    return HostCompressedBuilder(
         agent=AGENT,
-        episode_steps=9,
+        episode_steps=20,
         variant="action_aware",
+        passive_memory_ttl=4,
+        analysis_memory_ttl=4,
     )
-    builder.reset({"success": TernaryEnum.UNKNOWN, ROUTER: {}, HOST: {}})
-    return builder
 
 
-def test_process_properties_are_not_misclassified_as_process_events():
+def test_keeps_observable_event_attributes_and_expires_passive_memory():
+    relational_values = tuple(
+        1.0 if name == "connection_inbound_now" else 0.0
+        for name in RELATIONAL_EVENT_NOW_FEATURES
+    )
     builder = _builder()
-    service_inventory = builder.update(
-        {
-            "success": TernaryEnum.TRUE,
-            HOST: {"Processes": [{"Properties": ["rfi"]}]},
-        },
-        step=1,
+    details = ObservedHostEventDetails(
+        process_count=5,
+        process_has_pid=True,
+        process_has_connection=True,
+        connection_count=2,
+        connection_has_remote_address=True,
+        connection_has_remote_port=True,
+        relational_values=relational_values,
     )
-    assert service_inventory.node_features[
-        HOST_NODE, FEATURE_INDEX["process_event_now"]
-    ] == 0
+    initial = builder.reset(
+        {"success": TernaryEnum.UNKNOWN, ROUTER: {}, HOST: {}},
+        event_details={HOST: details},
+    )
 
-    event = builder.update(
-        {"success": TernaryEnum.TRUE, HOST: {}},
-        step=2,
-        event_indicators={
-            HOST: ObservedHostEvents(
-                process_creation=True,
-                network_connection=True,
+    assert (
+        initial.node_features[HOST_NODE, FEATURE_INDEX["process_event_count_now"]]
+        == 1.0
+    )
+    assert (
+        initial.node_features[HOST_NODE, FEATURE_INDEX["process_has_pid_memory"]] == 1.0
+    )
+    assert (
+        initial.node_features[HOST_NODE, FEATURE_INDEX["passive_memory_active"]] == 1.0
+    )
+    assert (
+        initial.node_features[HOST_NODE, FEATURE_INDEX["connection_inbound_now"]] == 1.0
+    )
+    assert (
+        initial.node_features[HOST_NODE, FEATURE_INDEX["connection_inbound_memory"]]
+        == 1.0
+    )
+
+    aged = builder.update({"success": TernaryEnum.UNKNOWN}, step=1)
+    assert (
+        aged.node_features[HOST_NODE, FEATURE_INDEX["process_event_count_now"]] == 0.0
+    )
+    assert np.isclose(
+        aged.node_features[HOST_NODE, FEATURE_INDEX["process_event_count_memory"]],
+        0.75,
+    )
+    assert np.isclose(
+        aged.node_features[HOST_NODE, FEATURE_INDEX["passive_memory_age_normalized"]],
+        0.25,
+    )
+    assert np.isclose(
+        aged.node_features[HOST_NODE, FEATURE_INDEX["connection_inbound_memory"]],
+        0.75,
+    )
+
+    builder.update({"success": TernaryEnum.UNKNOWN}, step=2)
+    builder.update({"success": TernaryEnum.UNKNOWN}, step=3)
+    expired = builder.update({"success": TernaryEnum.UNKNOWN}, step=4)
+    for feature in (
+        "process_event_count_memory",
+        "process_has_pid_memory",
+        "passive_memory_active",
+        "passive_memory_age_normalized",
+        "connection_inbound_memory",
+    ):
+        assert expired.node_features[HOST_NODE, FEATURE_INDEX[feature]] == 0.0
+
+
+def test_refresh_replaces_old_passive_snapshot_instead_of_extending_maximum():
+    builder = _builder()
+    builder.reset(
+        {"success": TernaryEnum.UNKNOWN, ROUTER: {}, HOST: {}},
+        event_details={
+            HOST: ObservedHostEventDetails(
+                process_count=5,
+                process_has_pid=True,
+                process_has_connection=True,
             )
         },
     )
-    for feature in (
-        "process_event_now",
-        "connection_event_now",
-        "process_event_memory",
-        "connection_event_memory",
-    ):
-        assert event.node_features[HOST_NODE, FEATURE_INDEX[feature]] == 1
-
-    no_new_event = builder.update(
+    refreshed = builder.update(
         {"success": TernaryEnum.UNKNOWN, HOST: {}},
-        step=3,
-    )
-    assert no_new_event.node_features[
-        HOST_NODE, FEATURE_INDEX["process_event_now"]
-    ] == 0
-    assert no_new_event.node_features[
-        HOST_NODE, FEATURE_INDEX["connection_event_now"]
-    ] == 0
-    assert no_new_event.node_features[
-        HOST_NODE, FEATURE_INDEX["process_event_memory"]
-    ] == 1
-    assert no_new_event.node_features[
-        HOST_NODE, FEATURE_INDEX["connection_event_memory"]
-    ] == 1
-
-
-def test_remove_preserves_belief_but_restore_clears_it():
-    builder = _builder()
-    builder.update(
-        {"success": TernaryEnum.TRUE, HOST: {}},
         step=1,
-        event_indicators={HOST: ObservedHostEvents(process_creation=True)},
+        event_details={HOST: ObservedHostEventDetails(process_count=1)},
+    )
+
+    assert np.isclose(
+        refreshed.node_features[HOST_NODE, FEATURE_INDEX["process_event_count_memory"]],
+        0.2,
+    )
+    assert (
+        refreshed.node_features[HOST_NODE, FEATURE_INDEX["process_has_pid_memory"]]
+        == 0.0
+    )
+    assert (
+        refreshed.node_features[
+            HOST_NODE, FEATURE_INDEX["process_has_connection_memory"]
+        ]
+        == 0.0
+    )
+    assert (
+        refreshed.node_features[
+            HOST_NODE, FEATURE_INDEX["passive_memory_age_normalized"]
+        ]
+        == 0.0
+    )
+
+
+def test_separates_analyse_history_and_restore_clears_both_memories():
+    builder = _builder()
+    builder.reset({"success": TernaryEnum.UNKNOWN, ROUTER: {}, HOST: {}})
+    builder.update(
+        {"success": TernaryEnum.UNKNOWN, HOST: {}},
+        step=1,
+        event_details={
+            HOST: ObservedHostEventDetails(
+                connection_count=1,
+                relational_values=tuple(
+                    1.0 if name == "connection_inbound_now" else 0.0
+                    for name in RELATIONAL_EVENT_NOW_FEATURES
+                ),
+            )
+        },
     )
     analysed = builder.update(
         {
             "success": TernaryEnum.TRUE,
             "action": Analyse(session=0, agent=AGENT, hostname=HOST),
-            HOST: {"Files": [{"Density": 0.92}, {"Density": 0.25}]},
+            HOST: {"Files": [{"Density": 0.8}]},
         },
         step=2,
     )
-    assert analysed.node_features[
-        HOST_NODE, FEATURE_INDEX["analysis_result_now"]
-    ] == 1
-    assert analysed.node_features[HOST_NODE, FEATURE_INDEX["analysis_memory"]] == 1
+
+    assert (
+        analysed.node_features[HOST_NODE, FEATURE_INDEX["analyse_completed_now"]] == 1.0
+    )
+    assert (
+        analysed.node_features[HOST_NODE, FEATURE_INDEX["analyse_memory_active"]] == 1.0
+    )
     assert np.isclose(
-        analysed.node_features[
-            HOST_NODE, FEATURE_INDEX["max_file_density_memory"]
-        ],
-        0.92,
+        analysed.node_features[HOST_NODE, FEATURE_INDEX["max_file_density_memory"]],
+        0.8,
+    )
+    assert (
+        analysed.node_features[HOST_NODE, FEATURE_INDEX["passive_memory_active"]] == 1.0
+    )
+    assert (
+        analysed.node_features[HOST_NODE, FEATURE_INDEX["connection_inbound_memory"]]
+        > 0.0
     )
 
-    removed = builder.update(
+    reanalysed = builder.update(
         {
             "success": TernaryEnum.TRUE,
-            "action": Remove(session=0, agent=AGENT, hostname=HOST),
+            "action": Analyse(session=0, agent=AGENT, hostname=HOST),
+            HOST: {"Files": [{"Density": 0.2}]},
         },
         step=3,
     )
-    for feature in (
-        "process_event_memory",
-        "analysis_memory",
-        "max_file_density_memory",
-    ):
-        assert removed.node_features[HOST_NODE, FEATURE_INDEX[feature]] > 0
-
-    builder.update(
-        {
-            "success": TernaryEnum.TRUE,
-            "action": DeployDecoy(session=0, agent=AGENT, hostname=HOST),
-        },
-        step=4,
+    assert np.isclose(
+        reanalysed.node_features[HOST_NODE, FEATURE_INDEX["max_file_density_memory"]],
+        0.2,
     )
+
     restored = builder.update(
         {
             "success": TernaryEnum.TRUE,
             "action": Restore(session=0, agent=AGENT, hostname=HOST),
         },
-        step=5,
+        step=4,
     )
     for feature in (
-        "process_event_memory",
-        "connection_event_memory",
-        "analysis_memory",
+        "passive_memory_active",
+        "analyse_memory_active",
         "max_file_density_memory",
-        "decoy_active",
+        "connection_inbound_memory",
     ):
-        assert restored.node_features[HOST_NODE, FEATURE_INDEX[feature]] == 0
+        assert restored.node_features[HOST_NODE, FEATURE_INDEX[feature]] == 0.0
 
 
-def test_structure_policy_and_firewall_are_independent_relations():
-    builder = _builder()
-    blocked = builder.update(
-        {
-            "success": TernaryEnum.TRUE,
-            "action": BlockTrafficZone(
-                session=0,
-                agent=AGENT,
-                from_subnet="restricted_zone_a_subnet",
-                to_subnet="operational_zone_a_subnet",
-            ),
-        },
-        step=1,
+@pytest.mark.parametrize("canonical_schema", ["v2"])
+def test_semantic_mask_tracks_successful_firewall_transitions_independently_of_v2(
+    canonical_schema,
+):
+    env = CC4CanonicalFlatEnv(
+        episode_steps=20,
+        seed=123,
+        canonical_schema=canonical_schema,
+        semantic_action_mask=True,
     )
-    assert blocked.structural_adjacency[RESTRICTED_A, OPERATIONAL_A] == 1
-    assert blocked.communication_policy[RESTRICTED_A, OPERATIONAL_A] == 1
-    assert blocked.firewall_blocks[RESTRICTED_A, OPERATIONAL_A] == 1
-    assert blocked.firewall_blocks[OPERATIONAL_A, RESTRICTED_A] == 1
-
-    phase_one = builder.update({"success": TernaryEnum.UNKNOWN}, step=4)
-    np.testing.assert_array_equal(
-        phase_one.structural_adjacency,
-        blocked.structural_adjacency,
+    _, infos = env.reset(seed=123)
+    agent = env.possible_agents[0]
+    actions = env.env.actions(agent)
+    block_index = next(
+        index
+        for index, action in enumerate(actions)
+        if isinstance(action, BlockTrafficZone)
     )
-    assert phase_one.communication_policy[RESTRICTED_A, OPERATIONAL_A] == 0
-    assert phase_one.firewall_blocks[RESTRICTED_A, OPERATIONAL_A] == 1
-
-    allowed = builder.update(
-        {
-            "success": TernaryEnum.TRUE,
-            "action": AllowTrafficZone(
-                session=0,
-                agent=AGENT,
-                from_subnet="restricted_zone_a_subnet",
-                to_subnet="operational_zone_a_subnet",
-            ),
-        },
-        step=5,
+    block = actions[block_index]
+    allow_index = next(
+        index
+        for index, action in enumerate(actions)
+        if isinstance(action, AllowTrafficZone)
+        and action.from_subnet == block.from_subnet
+        and action.to_subnet == block.to_subnet
     )
-    assert allowed.firewall_blocks[RESTRICTED_A, OPERATIONAL_A] == 0
-    assert allowed.structural_adjacency[RESTRICTED_A, OPERATIONAL_A] == 1
 
-    edge_index = blocked.graph_edge_index()
-    edges = set(zip(edge_index[0], edge_index[1], strict=True))
-    assert (RESTRICTED_A, OPERATIONAL_A) in edges
-    assert (ADMIN, OFFICE) not in edges
+    assert infos[agent]["action_mask"][block_index]
+    assert not infos[agent]["action_mask"][allow_index]
+
+    _, _, _, _, infos = env.step({agent: block_index})
+    assert not infos[agent]["action_mask"][block_index]
+    assert infos[agent]["action_mask"][allow_index]
+
+    _, _, _, _, infos = env.step({agent: allow_index})
+    assert infos[agent]["action_mask"][block_index]
+    assert not infos[agent]["action_mask"][allow_index]
 
 
-def test_flat_view_is_exactly_recoverable():
-    builder = HostCompressedBuilder(
-        agent=AGENT,
-        episode_steps=100,
-        variant="belief",
+def test_can_use_official_mask_without_semantic_intervention():
+    v2_off = CC4CanonicalFlatEnv(
+        episode_steps=20,
+        seed=123,
+        canonical_schema="v2",
+        semantic_action_mask=False,
     )
-    canonical = builder.reset(
-        {"success": TernaryEnum.UNKNOWN, ROUTER: {}, HOST: {}}
+    observations, official_infos = v2_off.reset(seed=123)
+    agent = v2_off.possible_agents[0]
+    allow_index = next(
+        index
+        for index, action in enumerate(v2_off.env.actions(agent))
+        if isinstance(action, AllowTrafficZone)
     )
-    flat = canonical.flat_view()
-    recovered = deserialize_flat_view(flat)
-
-    assert flat.shape == (flat_observation_dim(),)
-    assert flat.dtype == np.float32
-    np.testing.assert_array_equal(recovered.node_features, canonical.node_features)
-    np.testing.assert_array_equal(recovered.host_membership, canonical.host_membership)
-    np.testing.assert_array_equal(
-        recovered.structural_adjacency,
-        canonical.structural_adjacency,
-    )
-    np.testing.assert_array_equal(
-        recovered.communication_policy,
-        canonical.communication_policy,
-    )
-    np.testing.assert_array_equal(recovered.firewall_blocks, canonical.firewall_blocks)
-    np.testing.assert_array_equal(recovered.global_features, canonical.global_features)
+    assert observations[agent].shape == (flat_observation_dim(),)
+    assert official_infos[agent]["action_mask"][allow_index]

@@ -1,9 +1,0 @@
-{
-  "total_simulator_steps": 100149,
-  "total_policy_decisions": 164124,
-  "total_episodes": 251,
-  "total_updates": 251,
-  "parameter_count": 291735,
-  "best_checkpoint_path": null,
-  "best_periodic_evaluation": null
-}

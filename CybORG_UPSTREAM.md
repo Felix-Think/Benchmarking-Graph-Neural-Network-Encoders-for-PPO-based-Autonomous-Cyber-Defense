@@ -1,56 +1,26 @@
-# Local CybORG patches
+# CybORG CAGE 4 hiện tại
 
-Thu muc `CybORG/` la vendored simulator va co cac ban va cuc bo da duoc kiem
-thu. Khong thay CybORG bang mot checkout upstream moi ma khong port va chay lai
-cac regression test duoi day.
+Vendor CAGE 4 được thêm bằng subtree ở commit 02fb82d, từ upstream 8c3c50c.
+Nguồn: https://github.com/cage-challenge/cage-challenge-4
+Không thay cây vendor hoặc cập nhật upstream trong đợt tinh gọn 2026-09-07.
 
-## SSH exploit-decoy event
+So với cây import 02fb82d, snapshot 009e34b chỉ khác hai file vendor:
 
-File:
-`CybORG/CybORG/Simulator/Actions/ConcreteActions/ExploitActions/SSHBruteForce.py`
+1. CybORG/CybORG/Simulator/SimulationController.py:
+   _find_observed_session tìm đúng session qua nhiều observation, không giả định
+   host observation đầu tiên luôn có trường Sessions. Regression:
+   tests/test_cc4_session_reassignment.py.
+2. CybORG/setup.py: cấu hình find_packages, package data và version.txt để cài
+   package local. Các thay đổi này đã có trước refactor.
 
-`SSHBruteForce` truyen `target_host` vao helper va ghi network-connection event
-vao host dung khi cham exploit decoy. Regression test:
-`tests/test_cyborg_ssh_decoy_fix.py`.
+Kiểm tra provenance local:
 
-## StopProcess service-session reload
+    git diff --stat 02fb82d 009e34b -- CybORG
+    git diff 009e34b -- CybORG
+    uvr python -m pytest tests/test_cc4_session_reassignment.py -q
 
-File: `CybORG/CybORG/Simulator/Actions/ConcreteActions/StopProcess.py`
+Lệnh diff thứ hai phải rỗng ở bản main sau dọn. Không tuyên bố vendor này chứa
+các bản vá Restore/CybORG++ CAGE 2 cũ: tài liệu đó thuộc lịch sử và nằm trong
+branch archive. Các đường dẫn test CAGE 2 cũ không còn áp dụng.
 
-`StopProcess` resolve session ID thanh session object truoc khi dung username,
-session type, agent, parent va timeout de reload service session. Regression
-test: `tests/test_cyborg_stop_process_fix.py`.
-
-## Validation
-
-```bash
-uv run --python 3.10 pytest tests/test_cyborg_ssh_decoy_fix.py \
-  tests/test_cyborg_stop_process_fix.py -q
-```
-
-## CybORG++ CAGE-2 bug fixes
-
-Sau khi doi chieu voi `alan-turing-institute/CybORG_plus_plus` commit
-`c343476cb4490ba3e850561e0d11e7036ce50822`, sau ban va cong bo trong
-`Debugged_CybORG` da duoc port vao API CybORG hien tai. Khong thay nguyen runtime
-bang fork cu vi benchmark dang dung scenario generator va wrapper cua API moi.
-
-Nguon, checksum va mapping chi tiet nam tai:
-`patches/cyborg_plus_plus/README.md`.
-
-Regression coverage:
-
-```bash
-uv run --python 3.10 pytest tests/test_cyborg_plus_plus_patches.py -q
-```
-
-## Restore service-process invariant
-
-File: `CybORG/CybORG/Simulator/Host.py`
-
-Runtime services use the key `process`, while the backup/restore path read the
-obsolete key `PID`. The local patch preserves the service-to-process mapping,
-so `Restore(Op_Server0)` no longer leaves `OTService` pointing to `None`.
-This is a local simulator invariant fix, not a claimed CybORG++ upstream patch.
-It does not change native reward or Restore cost. Regression coverage is part
-of `tests/test_cyborg_plus_plus_patches.py`.
+Reward/actions/durations của CAGE 4 không bị chỉnh sửa trong refactor này.

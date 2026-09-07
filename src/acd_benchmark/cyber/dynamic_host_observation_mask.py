@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from acd_benchmark.cyber.canonical_observation import (
+from acd_benchmark.cyber.observation_schema import (
     FEATURE_INDEX,
     MAX_LOCAL_HOSTS,
     NODE_FEATURES,
@@ -50,11 +50,9 @@ class FixedBudgetDynamicHostMask:
         if not 0.0 <= retention <= 1.0:
             raise ValueError("retention must be in [0, 1]")
         if tuple(getattr(env, "node_feature_names", ())) != NODE_FEATURES:
-            raise ValueError("FixedBudgetDynamicHostMask currently supports v1 only")
+            raise ValueError("Host masking requires the current canonical schema")
         if mask_process not in VALID_MASK_PROCESSES:
-            raise ValueError(
-                f"mask_process must be one of {VALID_MASK_PROCESSES}"
-            )
+            raise ValueError(f"mask_process must be one of {VALID_MASK_PROCESSES}")
 
         self.env = env
         self.retention = float(retention)
@@ -140,15 +138,18 @@ class FixedBudgetDynamicHostMask:
         node_size = NUM_NODES * len(NODE_FEATURES)
         membership_size = MAX_LOCAL_HOSTS * NUM_SUBNET_NODES
         nodes = transformed[:node_size].reshape(NUM_NODES, len(NODE_FEATURES))
-        membership = transformed[
-            node_size : node_size + membership_size
-        ].reshape(MAX_LOCAL_HOSTS, NUM_SUBNET_NODES)
+        membership = transformed[node_size : node_size + membership_size].reshape(
+            MAX_LOCAL_HOSTS, NUM_SUBNET_NODES
+        )
 
         existing_host_nodes = np.flatnonzero(
             (nodes[:, FEATURE_INDEX["exists"]] > 0.5)
             & (nodes[:, FEATURE_INDEX["is_host"]] > 0.5)
         ).astype(np.int64)
-        if self.mask_process == "persistent" and agent_index in self._persistent_visibility:
+        if (
+            self.mask_process == "persistent"
+            and agent_index in self._persistent_visibility
+        ):
             expected_hosts = self._persistent_existing_hosts[agent_index]
             if not np.array_equal(existing_host_nodes, expected_hosts):
                 raise RuntimeError(

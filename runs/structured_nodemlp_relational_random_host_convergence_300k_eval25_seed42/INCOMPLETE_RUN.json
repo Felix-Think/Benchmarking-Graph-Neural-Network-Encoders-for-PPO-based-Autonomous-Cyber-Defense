@@ -1,8 +1,0 @@
-{
-  "status": "aborted",
-  "reason": "The first 50k trajectory did not reproduce the matched seed-42 screen despite identical scientific configuration.",
-  "last_completed_update": 25,
-  "last_completed_training_step": 49900,
-  "usable_for_inference": false,
-  "blocker": "Cross-process deterministic seeding must be qualified before long training."
-}

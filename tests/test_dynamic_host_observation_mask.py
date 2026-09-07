@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from acd_benchmark.cyber.canonical_observation import (
+from acd_benchmark.cyber.observation_schema import (
     CanonicalObservation,
     FEATURE_INDEX,
     GLOBAL_FEATURES,
@@ -34,9 +34,7 @@ class DummyCanonicalEnv:
 
 def _observation(host_count: int = 8) -> np.ndarray:
     nodes = np.zeros((NUM_NODES, len(NODE_FEATURES)), dtype=np.float32)
-    membership = np.zeros(
-        (MAX_LOCAL_HOSTS, NUM_SUBNET_NODES), dtype=np.float32
-    )
+    membership = np.zeros((MAX_LOCAL_HOSTS, NUM_SUBNET_NODES), dtype=np.float32)
     for subnet in range(NUM_SUBNET_NODES):
         nodes[subnet, FEATURE_INDEX["exists"]] = 1.0
         nodes[subnet, FEATURE_INDEX["is_subnet"]] = 1.0
@@ -90,9 +88,7 @@ def test_fixed_budget_masks_only_dynamic_host_features() -> None:
 
     node_size = NUM_NODES * len(NODE_FEATURES)
     original_nodes = original[:node_size].reshape(NUM_NODES, len(NODE_FEATURES))
-    transformed_nodes = transformed[:node_size].reshape(
-        NUM_NODES, len(NODE_FEATURES)
-    )
+    transformed_nodes = transformed[:node_size].reshape(NUM_NODES, len(NODE_FEATURES))
     static_indices = [
         FEATURE_INDEX[name]
         for name in (

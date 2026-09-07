@@ -6,16 +6,15 @@ from CybORG.Simulator.Actions.ConcreteActions.DecoyActions.DeployDecoy import (
     DeployDecoy,
 )
 
-from acd_benchmark.cyber.canonical_observation import (
+from acd_benchmark.cyber.observation_schema import (
     FEATURE_INDEX,
     NUM_SUBNET_NODES,
     SUBNET_INDEX,
     flat_observation_dim,
 )
-from acd_benchmark.cyber.canonical_observation_v2 import (
+from acd_benchmark.cyber.observation_schema import (
     PASSIVE_NOW_FEATURES,
     RELATIONAL_EVENT_NOW_FEATURES,
-    V2_FEATURE_INDEX,
 )
 from acd_benchmark.cyber.cc4_canonical_env import (
     CANONICAL_PARSER_VERSION,
@@ -133,9 +132,7 @@ def test_visible_ip_maps_do_not_share_observations_between_blue_agents():
         canonical_schema="v2",
     )
     first_agent, second_agent = env.possible_agents[:2]
-    env._visible_ip_to_subnet = {
-        agent: {} for agent in env.possible_agents
-    }
+    env._visible_ip_to_subnet = {agent: {} for agent in env.possible_agents}
     env._refresh_visible_ip_maps(
         {
             first_agent: {
@@ -190,22 +187,6 @@ def test_checkpoint_parser_guard_rejects_old_or_missing_versions():
         )
     with pytest.raises(ValueError, match="incompatible"):
         require_current_canonical_parser({})
-
-
-def test_binary_event_parser_is_derived_from_same_visible_observation():
-    raw_observation = {
-        "host_process": {"Processes": [{"PID": 17}]},
-        "host_connection": {
-            "Processes": [{"Connections": [{"local_port": 22}]}]
-        },
-    }
-
-    events = CC4CanonicalFlatEnv._observed_host_events(raw_observation)
-
-    assert events["host_process"].process_creation
-    assert not events["host_process"].network_connection
-    assert not events["host_connection"].process_creation
-    assert events["host_connection"].network_connection
 
 
 def test_successful_decoy_action_feedback_is_not_passive_evidence():
@@ -269,25 +250,14 @@ def test_successful_decoy_feedback_keeps_monitor_connection_evidence():
 
 
 def test_reset_inventory_is_not_encoded_as_passive_evidence():
-    for schema in ("v1", "v2"):
-        env = CC4CanonicalFlatEnv(
-            episode_steps=20,
-            seed=123,
-            canonical_schema=schema,
+    env = CC4CanonicalFlatEnv(episode_steps=20, seed=123)
+    env.reset(seed=123)
+    for canonical in env.last_canonical.values():
+        indices = (
+            FEATURE_INDEX["process_event_count_now"],
+            FEATURE_INDEX["connection_event_count_now"],
         )
-        env.reset(seed=123)
-        for canonical in env.last_canonical.values():
-            if schema == "v1":
-                indices = (
-                    FEATURE_INDEX["process_event_now"],
-                    FEATURE_INDEX["connection_event_now"],
-                )
-            else:
-                indices = (
-                    V2_FEATURE_INDEX["process_event_count_now"],
-                    V2_FEATURE_INDEX["connection_event_count_now"],
-                )
-            assert np.count_nonzero(canonical.node_features[:, indices]) == 0
+        assert np.count_nonzero(canonical.node_features[:, indices]) == 0
 
 
 def test_canonical_env_matches_current_ppo_contract():
@@ -315,8 +285,7 @@ def test_canonical_env_matches_current_ppo_contract():
         )
 
     sleep_actions = {
-        agent: env.action_labels(agent).index("Sleep")
-        for agent in env.possible_agents
+        agent: env.action_labels(agent).index("Sleep") for agent in env.possible_agents
     }
     next_observations, rewards, terminated, truncated, next_infos = env.step(
         sleep_actions
@@ -351,42 +320,6 @@ def test_canonical_structure_matches_cage4_data_links():
         np.testing.assert_array_equal(canonical.structural_adjacency, expected)
 
 
-def test_canonical_event_features_match_cage4_event_channels():
-    env = CC4CanonicalFlatEnv(episode_steps=30, seed=123)
-    env.reset(seed=123)
-    sleep_actions = {
-        agent: env.action_labels(agent).index("Sleep")
-        for agent in env.possible_agents
-    }
-    process_events = 0
-    connection_events = 0
-
-    for _ in range(20):
-        env.step(sleep_actions)
-        for agent in env.possible_agents:
-            canonical = env.last_canonical[agent]
-            builder = env._builders[agent]
-            raw_observation = env.last_raw_observations[agent]
-            indicators_by_host = env._observed_host_events(raw_observation)
-            for hostname, indicators in indicators_by_host.items():
-                node_index = builder._node_index(hostname)
-                if node_index is None:
-                    continue
-                process_value = canonical.node_features[
-                    node_index, FEATURE_INDEX["process_event_now"]
-                ]
-                connection_value = canonical.node_features[
-                    node_index, FEATURE_INDEX["connection_event_now"]
-                ]
-                assert bool(process_value) == indicators.process_creation
-                assert bool(connection_value) == indicators.network_connection
-                process_events += int(process_value)
-                connection_events += int(connection_value)
-
-    assert process_events > 0
-    assert connection_events > 0
-
-
 def test_v2_event_features_match_raw_blue_observation():
     env = CC4CanonicalFlatEnv(
         episode_steps=30,
@@ -395,8 +328,7 @@ def test_v2_event_features_match_raw_blue_observation():
     )
     env.reset(seed=123)
     sleep_actions = {
-        agent: env.action_labels(agent).index("Sleep")
-        for agent in env.possible_agents
+        agent: env.action_labels(agent).index("Sleep") for agent in env.possible_agents
     }
     observed_events = 0
 
@@ -416,9 +348,7 @@ def test_v2_event_features_match_raw_blue_observation():
                     continue
                 node = canonical.node_features[node_index]
                 expected = details.normalized_values()
-                actual = node[
-                    [V2_FEATURE_INDEX[name] for name in PASSIVE_NOW_FEATURES]
-                ]
+                actual = node[[FEATURE_INDEX[name] for name in PASSIVE_NOW_FEATURES]]
                 np.testing.assert_array_equal(actual, expected)
                 observed_events += int(details.has_passive_event)
 

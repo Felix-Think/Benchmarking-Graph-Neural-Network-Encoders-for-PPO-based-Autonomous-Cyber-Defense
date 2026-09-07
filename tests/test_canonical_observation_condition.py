@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from acd_benchmark.cyber.canonical_observation import (
+from acd_benchmark.cyber.observation_schema import (
     FEATURE_INDEX,
     GLOBAL_FEATURES,
     MAX_LOCAL_HOSTS,
@@ -12,15 +12,13 @@ from acd_benchmark.cyber.canonical_observation import (
     deserialize_flat_view,
 )
 from acd_benchmark.cyber.canonical_observation_condition import (
-    V1_SENSOR_EVIDENCE_FEATURES,
+    SENSOR_EVIDENCE_FEATURES,
     CanonicalObservationCondition,
 )
-from acd_benchmark.cyber.canonical_observation_v2 import (
+from acd_benchmark.cyber.observation_schema import (
     PASSIVE_MEMORY_FEATURES,
     PASSIVE_NOW_FEATURES,
-    V2_FEATURE_INDEX,
-    V2_NODE_FEATURES,
-    v2_flat_observation_dim,
+    flat_observation_dim,
 )
 
 
@@ -128,12 +126,12 @@ def test_full_preserves_every_canonical_block():
 
 def test_no_evidence_preserves_action_state_and_topology():
     _, transformed, _ = _condition("no_evidence")
-    evidence_indices = [FEATURE_INDEX[name] for name in V1_SENSOR_EVIDENCE_FEATURES]
+    evidence_indices = [FEATURE_INDEX[name] for name in SENSOR_EVIDENCE_FEATURES]
 
     assert not transformed.node_features[:, evidence_indices].any()
     assert transformed.node_features[:, FEATURE_INDEX["decoy_active"]].all()
-    assert transformed.node_features[:, FEATURE_INDEX["analysis_result_now"]].all()
-    assert transformed.node_features[:, FEATURE_INDEX["analysis_memory"]].all()
+    assert transformed.node_features[:, FEATURE_INDEX["analyse_completed_now"]].all()
+    assert transformed.node_features[:, FEATURE_INDEX["analyse_memory_active"]].all()
     assert transformed.host_membership.all()
     assert transformed.structural_adjacency.all()
     assert transformed.communication_policy.all()
@@ -184,15 +182,15 @@ def test_zero_with_mask_removes_observation_but_not_mask():
 
 
 def test_v2_no_evidence_removes_all_relational_now_and_memory_features():
-    observation = np.ones(v2_flat_observation_dim(), dtype=np.float32)
+    observation = np.ones(flat_observation_dim(), dtype=np.float32)
     env = StaticCanonicalEnv(observation)
-    env.node_feature_names = V2_NODE_FEATURES
+    env.node_feature_names = NODE_FEATURES
     conditioned = CanonicalObservationCondition(env, condition="no_evidence")
 
     observations, infos = conditioned.reset(seed=123)
-    nodes = observations[AGENT][
-        : NUM_NODES * len(V2_NODE_FEATURES)
-    ].reshape(NUM_NODES, len(V2_NODE_FEATURES))
+    nodes = observations[AGENT][: NUM_NODES * len(NODE_FEATURES)].reshape(
+        NUM_NODES, len(NODE_FEATURES)
+    )
     evidence_features = (
         *PASSIVE_NOW_FEATURES,
         *PASSIVE_MEMORY_FEATURES,
@@ -201,9 +199,9 @@ def test_v2_no_evidence_removes_all_relational_now_and_memory_features():
     )
 
     for feature in evidence_features:
-        assert not nodes[:, V2_FEATURE_INDEX[feature]].any()
-    assert nodes[:, V2_FEATURE_INDEX["decoy_active"]].all()
-    assert nodes[:, V2_FEATURE_INDEX["analyse_completed_now"]].all()
+        assert not nodes[:, FEATURE_INDEX[feature]].any()
+    assert nodes[:, FEATURE_INDEX["decoy_active"]].all()
+    assert nodes[:, FEATURE_INDEX["analyse_completed_now"]].all()
     np.testing.assert_array_equal(
         infos[AGENT]["action_mask"],
         [True, False, True],

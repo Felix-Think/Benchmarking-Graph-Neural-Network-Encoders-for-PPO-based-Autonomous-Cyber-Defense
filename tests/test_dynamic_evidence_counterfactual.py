@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from acd_benchmark.cyber.canonical_observation import (
+from acd_benchmark.cyber.observation_schema import (
     CanonicalObservation,
     FEATURE_INDEX,
     GLOBAL_FEATURES,
@@ -14,11 +14,6 @@ from acd_benchmark.cyber.canonical_observation import (
 from acd_benchmark.cyber.dynamic_evidence_counterfactual import (
     DynamicEvidenceCounterfactual,
     EVIDENCE_NODE_FEATURES,
-    V2_EVIDENCE_NODE_FEATURES,
-)
-from acd_benchmark.cyber.canonical_observation_v2 import (
-    V2_FEATURE_INDEX,
-    V2_NODE_FEATURES,
 )
 
 
@@ -30,15 +25,13 @@ class DummyEnv:
 
 class DummyV2Env:
     possible_agents = ("blue_agent_0",)
-    node_feature_names = V2_NODE_FEATURES
+    node_feature_names = NODE_FEATURES
     last_canonical = {}
 
 
 def _observation(offset: float = 0.0) -> np.ndarray:
     nodes = np.zeros((NUM_NODES, len(NODE_FEATURES)), dtype=np.float32)
-    membership = np.zeros(
-        (MAX_LOCAL_HOSTS, NUM_SUBNET_NODES), dtype=np.float32
-    )
+    membership = np.zeros((MAX_LOCAL_HOSTS, NUM_SUBNET_NODES), dtype=np.float32)
     evidence_indices = [FEATURE_INDEX[name] for name in EVIDENCE_NODE_FEATURES]
     for host_row in range(8):
         node = NUM_SUBNET_NODES + host_row
@@ -118,19 +111,17 @@ def test_zero_evidence_preserves_decoy_and_non_node_blocks() -> None:
 
 
 def test_v2_zero_evidence_preserves_action_state() -> None:
-    nodes = np.zeros((NUM_NODES, len(V2_NODE_FEATURES)), dtype=np.float32)
+    nodes = np.zeros((NUM_NODES, len(NODE_FEATURES)), dtype=np.float32)
     host = NUM_SUBNET_NODES
-    nodes[host, V2_FEATURE_INDEX["exists"]] = 1.0
-    nodes[host, V2_FEATURE_INDEX["is_host"]] = 1.0
-    for feature in V2_EVIDENCE_NODE_FEATURES:
-        nodes[host, V2_FEATURE_INDEX[feature]] = 1.0
-    nodes[host, V2_FEATURE_INDEX["decoy_active"]] = 1.0
-    nodes[host, V2_FEATURE_INDEX["analyse_memory_active"]] = 1.0
+    nodes[host, FEATURE_INDEX["exists"]] = 1.0
+    nodes[host, FEATURE_INDEX["is_host"]] = 1.0
+    for feature in EVIDENCE_NODE_FEATURES:
+        nodes[host, FEATURE_INDEX[feature]] = 1.0
+    nodes[host, FEATURE_INDEX["decoy_active"]] = 1.0
+    nodes[host, FEATURE_INDEX["analyse_memory_active"]] = 1.0
     observation = CanonicalObservation(
         node_features=nodes,
-        host_membership=np.zeros(
-            (MAX_LOCAL_HOSTS, NUM_SUBNET_NODES), dtype=np.float32
-        ),
+        host_membership=np.zeros((MAX_LOCAL_HOSTS, NUM_SUBNET_NODES), dtype=np.float32),
         structural_adjacency=np.eye(NUM_SUBNET_NODES, dtype=np.float32),
         communication_policy=np.ones(
             (NUM_SUBNET_NODES, NUM_SUBNET_NODES), dtype=np.float32
@@ -146,13 +137,10 @@ def test_v2_zero_evidence_preserves_action_state() -> None:
         transform="zero_evidence",
     )
     transformed = gate._transform_agent("blue_agent_0", 0, observation)
-    transformed_nodes = transformed[
-        : NUM_NODES * len(V2_NODE_FEATURES)
-    ].reshape(NUM_NODES, len(V2_NODE_FEATURES))
-    for feature in V2_EVIDENCE_NODE_FEATURES:
-        assert transformed_nodes[host, V2_FEATURE_INDEX[feature]] == 0.0
-    assert transformed_nodes[host, V2_FEATURE_INDEX["decoy_active"]] == 1.0
-    assert (
-        transformed_nodes[host, V2_FEATURE_INDEX["analyse_memory_active"]]
-        == 1.0
+    transformed_nodes = transformed[: NUM_NODES * len(NODE_FEATURES)].reshape(
+        NUM_NODES, len(NODE_FEATURES)
     )
+    for feature in EVIDENCE_NODE_FEATURES:
+        assert transformed_nodes[host, FEATURE_INDEX[feature]] == 0.0
+    assert transformed_nodes[host, FEATURE_INDEX["decoy_active"]] == 1.0
+    assert transformed_nodes[host, FEATURE_INDEX["analyse_memory_active"]] == 1.0

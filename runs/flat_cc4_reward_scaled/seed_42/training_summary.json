@@ -1,7 +1,0 @@
-{
-  "total_simulator_steps": 500346,
-  "total_policy_decisions": 1016769,
-  "total_episodes": 1254,
-  "total_updates": 1254,
-  "parameter_count": 107891
-}

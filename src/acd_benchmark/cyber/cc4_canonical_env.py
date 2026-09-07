@@ -18,22 +18,19 @@ from CybORG.Simulator.Actions.ConcreteActions.DecoyActions.DeployDecoy import (
     DeployDecoy,
 )
 
-from acd_benchmark.cyber.canonical_observation import (
+from acd_benchmark.cyber.observation_schema import (
+    CANONICAL_SCHEMA,
+    NODE_FEATURES,
+    RELATIONAL_EVENT_NOW_FEATURES,
     SUBNET_INDEX,
     SUBNETS,
     VALID_VARIANTS,
     CanonicalObservation,
-    HostCompressedBuilder,
-    ObservedHostEvents,
     flat_observation_dim,
 )
-from acd_benchmark.cyber.canonical_observation_v2 import (
-    CANONICAL_SCHEMAS,
-    RELATIONAL_EVENT_NOW_FEATURES,
-    V2_NODE_FEATURES,
-    HostCompressedV2Builder,
+from acd_benchmark.cyber.canonical_observation import (
+    HostCompressedBuilder,
     ObservedHostEventDetails,
-    v2_flat_observation_dim,
 )
 
 
@@ -58,10 +55,9 @@ class CC4CanonicalFlatEnv:
         episode_steps: int = 500,
         seed: int | None = None,
         canonical_variant: str = "action_aware",
-        evidence_age_horizon: int = 50,
         environment_distribution: str = "official",
-        canonical_schema: str = "v1",
-        passive_memory_ttl: int = 20,
+        canonical_schema: str = CANONICAL_SCHEMA,
+        passive_memory_ttl: int = 5,
         analysis_memory_ttl: int = 20,
         semantic_action_mask: bool = False,
     ):
@@ -72,8 +68,10 @@ class CC4CanonicalFlatEnv:
                 "environment_distribution must be one of "
                 f"{VALID_ENVIRONMENT_DISTRIBUTIONS}"
             )
-        if canonical_schema not in CANONICAL_SCHEMAS:
-            raise ValueError(f"canonical_schema must be one of {CANONICAL_SCHEMAS}")
+        if canonical_schema != CANONICAL_SCHEMA:
+            raise ValueError(
+                "Legacy canonical schemas are available on the archive branch."
+            )
         cyborg = make_cc4_env(
             episode_steps=episode_steps,
             seed=seed,
@@ -83,18 +81,13 @@ class CC4CanonicalFlatEnv:
         self.possible_agents = BLUE_AGENTS
         self.episode_steps = episode_steps
         self.canonical_variant = canonical_variant
-        self.evidence_age_horizon = evidence_age_horizon
         self.environment_distribution = environment_distribution
         self.canonical_schema = canonical_schema
         self.passive_memory_ttl = passive_memory_ttl
         self.analysis_memory_ttl = analysis_memory_ttl
         self.semantic_action_mask = semantic_action_mask
         self._step = 0
-        observation_dim = (
-            flat_observation_dim()
-            if canonical_schema == "v1"
-            else v2_flat_observation_dim()
-        )
+        observation_dim = flat_observation_dim()
         self._observation_space = Box(
             low=0.0,
             high=1.0,
@@ -108,36 +101,20 @@ class CC4CanonicalFlatEnv:
             agent: {} for agent in self.possible_agents
         }
 
-    def _new_builders(
-        self,
-    ) -> dict[str, HostCompressedBuilder | HostCompressedV2Builder]:
-        if self.canonical_schema == "v2":
-            return {
-                agent: HostCompressedV2Builder(
-                    agent=agent,
-                    episode_steps=self.episode_steps,
-                    variant=self.canonical_variant,
-                    passive_memory_ttl=self.passive_memory_ttl,
-                    analysis_memory_ttl=self.analysis_memory_ttl,
-                )
-                for agent in self.possible_agents
-            }
+    def _new_builders(self) -> dict[str, HostCompressedBuilder]:
         return {
             agent: HostCompressedBuilder(
                 agent=agent,
                 episode_steps=self.episode_steps,
                 variant=self.canonical_variant,
-                evidence_age_horizon=self.evidence_age_horizon,
+                passive_memory_ttl=self.passive_memory_ttl,
+                analysis_memory_ttl=self.analysis_memory_ttl,
             )
             for agent in self.possible_agents
         }
 
     @property
     def node_feature_names(self) -> tuple[str, ...]:
-        if self.canonical_schema == "v2":
-            return V2_NODE_FEATURES
-        from acd_benchmark.cyber.canonical_observation import NODE_FEATURES
-
         return NODE_FEATURES
 
     @staticmethod
@@ -186,23 +163,21 @@ class CC4CanonicalFlatEnv:
                 if not is_decoy_process_feedback and (
                     not process_connections
                     or any(
-                    process.get(key) is not None
-                    for key in (
-                        "PID",
-                        "PPID",
-                        "service_name",
-                        "username",
-                        "Properties",
-                    )
+                        process.get(key) is not None
+                        for key in (
+                            "PID",
+                            "PPID",
+                            "service_name",
+                            "username",
+                            "Properties",
+                        )
                     )
                 ):
                     process_events.append(process)
 
             if not process_events and not connections:
                 continue
-            relational = {
-                name: 0.0 for name in RELATIONAL_EVENT_NOW_FEATURES
-            }
+            relational = {name: 0.0 for name in RELATIONAL_EVENT_NOW_FEATURES}
             for connection in connections:
                 local_port = connection.get("local_port")
                 remote_port = connection.get("remote_port")
@@ -233,9 +208,9 @@ class CC4CanonicalFlatEnv:
                         relational["remote_address_unknown_now"] = 1.0
                     else:
                         relational["remote_address_known_host_now"] = 1.0
-                        relational[
-                            f"connection_remote_subnet_{remote_subnet}_now"
-                        ] = 1.0
+                        relational[f"connection_remote_subnet_{remote_subnet}_now"] = (
+                            1.0
+                        )
             details[hostname] = ObservedHostEventDetails(
                 process_count=len(process_events),
                 process_has_pid=any(
@@ -258,8 +233,7 @@ class CC4CanonicalFlatEnv:
                     for connection in connections
                 ),
                 relational_values=tuple(
-                    relational[name]
-                    for name in RELATIONAL_EVENT_NOW_FEATURES
+                    relational[name] for name in RELATIONAL_EVENT_NOW_FEATURES
                 ),
             )
         return details
@@ -313,33 +287,17 @@ class CC4CanonicalFlatEnv:
                     if address is not None:
                         visible_ip_to_subnet[str(address)] = subnet_index
 
-    @classmethod
-    def _observed_host_events(
-        cls,
-        observation: dict,
-    ) -> dict[str, ObservedHostEvents]:
-        details = cls._observed_host_event_details(observation)
-        return {
-            hostname: ObservedHostEvents(
-                process_creation=event.process_count > 0,
-                network_connection=event.connection_count > 0,
-            )
-            for hostname, event in details.items()
-        }
-
     def _add_decision_status(self, infos: dict, raw_observations: dict) -> dict:
         for agent in self.possible_agents:
             infos[agent]["decision_ready"] = (
-                raw_observations[agent].get("success")
-                != TernaryEnum.IN_PROGRESS
+                raw_observations[agent].get("success") != TernaryEnum.IN_PROGRESS
             )
         return infos
 
     def _normalise_episode_end(self, raw_terminated, raw_truncated):
         raw_done = {
             agent: bool(
-                raw_terminated.get(agent, False)
-                or raw_truncated.get(agent, False)
+                raw_terminated.get(agent, False) or raw_truncated.get(agent, False)
             )
             for agent in self.possible_agents
         }
@@ -366,46 +324,31 @@ class CC4CanonicalFlatEnv:
                 elif isinstance(action, BlockTrafficZone):
                     action_mask[action_index] = edge not in blocked_edges
             if not action_mask.any():
-                raise RuntimeError(f"Semantic action mask removed every action for {agent}")
+                raise RuntimeError(
+                    f"Semantic action mask removed every action for {agent}"
+                )
             info["action_mask"] = action_mask
             transformed[agent] = info
         return transformed
 
     def _build_reset_canonical(self, agent: str, observation: dict):
-        if self.canonical_schema == "v2":
-            return self._builders[agent].reset(
-                observation,
-                # Reset observations describe static host/service inventory.
-                # They are not passive security events.
-                event_details={},
-            )
-        return self._builders[agent].reset(
-            observation,
-            event_indicators={},
-        )
+        # Initial service inventory is not a passive security alert.
+        return self._builders[agent].reset(observation, event_details={})
 
     def _build_step_canonical(self, agent: str, observation: dict):
-        if self.canonical_schema == "v2":
-            return self._builders[agent].update(
-                observation,
-                step=self._step,
-                event_details=self._observed_host_event_details(
-                    observation,
-                    self._visible_ip_to_subnet[agent],
-                ),
-            )
         return self._builders[agent].update(
             observation,
             step=self._step,
-            event_indicators=self._observed_host_events(observation),
+            event_details=self._observed_host_event_details(
+                observation,
+                self._visible_ip_to_subnet[agent],
+            ),
         )
 
     def reset(self, seed: int | None = None):
         raw_observations, infos = self.env.reset(seed=seed)
         self.last_raw_observations = deepcopy(raw_observations)
-        self._visible_ip_to_subnet = {
-            agent: {} for agent in self.possible_agents
-        }
+        self._visible_ip_to_subnet = {agent: {} for agent in self.possible_agents}
         self._refresh_visible_ip_maps(self.last_raw_observations)
         self._step = 0
         self._builders = self._new_builders()

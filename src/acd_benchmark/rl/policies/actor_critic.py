@@ -1,18 +1,6 @@
 import torch
 import torch.nn as nn
 from torch.distributions import Categorical
-from acd_benchmark.rl.ppo.init_weight import init_weight
-
-class MLP(nn.Module):
-    def __init__(self, input_dim, output_dim, head_hidden_dim = 128):
-        super().__init__()
-        self.net = nn.Sequential(
-            nn.Linear(input_dim, head_hidden_dim),
-            nn.ReLU(),
-            nn.Linear(head_hidden_dim, output_dim)
-        )
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.net(x)
 
 
 class CategoricalActorCritic(nn.Module):
@@ -28,13 +16,13 @@ class CategoricalActorCritic(nn.Module):
         logits, value = self.forward(observation)
 
         if action_mask is not None:
-            action_mask = torch.as_tensor(action_mask, dtype=torch.bool, device=logits.device,)
+            action_mask = torch.as_tensor(
+                action_mask,
+                dtype=torch.bool,
+                device=logits.device,
+            )
 
-            if (
-                action_mask.ndim == 1
-                and logits.ndim == 2
-                and logits.shape[0] == 1
-            ):
+            if action_mask.ndim == 1 and logits.ndim == 2 and logits.shape[0] == 1:
                 action_mask = action_mask.unsqueeze(0)
 
             if action_mask.shape != logits.shape:
@@ -55,11 +43,7 @@ class CategoricalActorCritic(nn.Module):
         distribution = Categorical(logits=logits)
 
         if action is None:
-            action = (
-                logits.argmax(dim=-1)
-                if deterministic
-                else distribution.sample()
-            )
+            action = logits.argmax(dim=-1) if deterministic else distribution.sample()
         else:
             action = torch.as_tensor(
                 action,
@@ -88,43 +72,6 @@ class CategoricalActorCritic(nn.Module):
 
         return action, log_prob, entropy, value.squeeze(-1)
 
-
     def get_value(self, observation: torch.Tensor):
         _, value = self.forward(observation)
         return value.squeeze(-1)
-
-
-class ActorCritic(CategoricalActorCritic):
-    def __init__(
-        self,
-        latent_dim: int,
-        num_actions: int,
-        head_hidden_dim: int = 128,
-    ):
-        super().__init__()
-
-        self.actor = MLP(
-            input_dim=latent_dim,
-            output_dim=num_actions,
-            head_hidden_dim=head_hidden_dim,
-        )
-        self.critic = MLP(
-            input_dim=latent_dim,
-            output_dim=1,
-            head_hidden_dim=head_hidden_dim,
-        )
-
-        self.actor.apply(init_weight)
-        self.critic.apply(init_weight)
-
-    def encode(self, observation: torch.Tensor) -> torch.Tensor:
-        raise NotImplementedError
-
-    def forward(
-        self,
-        observation: torch.Tensor,
-    ) -> tuple[torch.Tensor, torch.Tensor]:
-        latent = self.encode(observation)
-        logits = self.actor(latent)
-        value = self.critic(latent)
-        return logits, value

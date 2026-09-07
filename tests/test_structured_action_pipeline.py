@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 
-from acd_benchmark.cyber.canonical_observation import (
+from acd_benchmark.cyber.observation_schema import (
     AGENT_SUBNETS,
     NUM_SUBNET_NODES,
     SUBNET_INDEX,
@@ -14,10 +14,8 @@ from acd_benchmark.cyber.cc4_structured_action_env import (
     CC4StructuredActionEnv,
     _official_action_key,
 )
-from acd_benchmark.rl.policies.structured_action import (
-    StructuredGCNActorCritic,
-    StructuredNodeMLPActorCritic,
-)
+from acd_benchmark.rl.policies.nodemlp import StructuredNodeMLPActorCritic
+from acd_benchmark.rl.policies.gcn import StructuredGCNActorCritic
 
 
 def _make_env(seed: int = 123):
@@ -43,9 +41,10 @@ def test_structured_catalog_maps_to_same_native_action_semantics():
         for action_id in np.flatnonzero(mask):
             native_id = int(mapping[action_id])
             assert native_id >= 0
-            assert _official_action_key(native_labels[native_id]) == env._keys[agent][
-                action_id
-            ]
+            assert (
+                _official_action_key(native_labels[native_id])
+                == env._keys[agent][action_id]
+            )
 
 
 def test_structured_catalog_executes_one_valid_action_per_agent():
@@ -63,9 +62,7 @@ def test_structured_catalog_executes_one_valid_action_per_agent():
     assert not any(terminated.values())
     assert not any(truncated.values())
     for agent in env.possible_agents:
-        assert next_infos[agent]["action_mask"].shape == (
-            NUM_STRUCTURED_ACTIONS,
-        )
+        assert next_infos[agent]["action_mask"].shape == (NUM_STRUCTURED_ACTIONS,)
 
 
 def test_structured_policies_match_ppo_shapes_and_action_mask():
