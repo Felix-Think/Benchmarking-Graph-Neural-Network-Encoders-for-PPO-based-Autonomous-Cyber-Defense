@@ -1,0 +1,9 @@
+Gym has been unmaintained since 2022 and does not support NumPy 2.0 amongst other critical functionality.
+Please upgrade to Gymnasium, the maintained drop-in replacement of Gym, or contact the authors of your software and request that they upgrade.
+Users of this version of Gym should be able to simply replace 'import gym' with 'import gymnasium as gym' in the vast majority of cases.
+See the migration guide at https://gymnasium.farama.org/introduction/migration_guide/ for additional information.
+/Users/felix/Documents/Cybersecurity_Research_Topic/Topic_1/Benchmarking Graph Neural Network Encoders for PPO-based Autonomous Cyber Defense under Partial Observability/Code/Benchmarking Graph Neural Network Encoders for PPO-based Autonomous Cyber Defense under Partial Observability/.venv/lib/python3.10/site-packages/pygame/pkgdata.py:25: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  from pkg_resources import resource_stream, resource_exists
+policy=gcn episodes=3 mean_return=-432.67 evidence=734 decisions=1822
+mean_full_static_tv=0.171166
+same_host_response_within_10=0.18528610354223432

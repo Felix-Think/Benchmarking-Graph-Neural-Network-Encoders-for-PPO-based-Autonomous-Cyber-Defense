@@ -180,7 +180,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "cyborg", editable = "CybORG" },
+    { name = "cyborg", directory = "CybORG" },
     { name = "numpy", specifier = "==1.26.4" },
     { name = "protobuf", specifier = "==4.25.3" },
     { name = "tensorboard", specifier = "==2.15.2" },
@@ -360,7 +360,7 @@ wheels = [
 [[package]]
 name = "cyborg"
 version = "4.0"
-source = { editable = "CybORG" }
+source = { directory = "CybORG" }
 dependencies = [
     { name = "gym" },
     { name = "gymnasium" },

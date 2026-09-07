@@ -1,0 +1,338 @@
+{
+  "policy_type": "flat",
+  "canonical_schema": "v1",
+  "semantic_action_mask": false,
+  "training_seed": 42,
+  "environment_distribution": "random_host",
+  "episodes": 3,
+  "mean_return": -638.3333333333334,
+  "std_return": 75.75545451575675,
+  "episode_returns": [
+    -735.0,
+    -550.0,
+    -630.0
+  ],
+  "ticks": 1197,
+  "decisions": 1758,
+  "evidence_occurrences": 920,
+  "event_type_counts": {
+    "analysis_result_now": 212,
+    "connection_event_now": 516,
+    "max_file_density_now": 22,
+    "process_event_now": 270
+  },
+  "event_buffer_semantics": {
+    "old_observed_event_items_at_evidence_ticks": 1751,
+    "current_unobserved_event_items_at_evidence_ticks": 0,
+    "unobserved_fraction": 0.0
+  },
+  "decision_context": {
+    "current_evidence_present": 362,
+    "current_evidence_present_fraction": 0.20591581342434584,
+    "memory_evidence_present": 1693,
+    "memory_evidence_present_fraction": 0.9630261660978384,
+    "host_targeted": 1426,
+    "target_current_evidence": 27,
+    "target_current_evidence_given_host_action_and_current_context": 0.0967741935483871,
+    "uniform_host_current_chance": 0.08879486163799889,
+    "target_memory_evidence": 565,
+    "target_memory_evidence_given_host_action_and_memory_context": 0.41120815138282385,
+    "uniform_host_memory_chance": 0.49440802566348413
+  },
+  "action_proportions": {
+    "all": {
+      "AllowTrafficZone": 0.11205915813424346,
+      "Analyse": 0.12116040955631399,
+      "BlockTrafficZone": 0.04209328782707622,
+      "DeployDecoy": 0.07508532423208192,
+      "Monitor": 0.019340159271899887,
+      "Remove": 0.11831626848691695,
+      "Restore": 0.49658703071672355,
+      "Sleep": 0.015358361774744027
+    },
+    "current_evidence_present": {
+      "AllowTrafficZone": 0.143646408839779,
+      "Analyse": 0.12154696132596685,
+      "BlockTrafficZone": 0.04419889502762431,
+      "DeployDecoy": 0.06353591160220995,
+      "Monitor": 0.024861878453038673,
+      "Remove": 0.11049723756906077,
+      "Restore": 0.47513812154696133,
+      "Sleep": 0.016574585635359115
+    },
+    "current_evidence_absent": {
+      "AllowTrafficZone": 0.10386819484240688,
+      "Analyse": 0.12106017191977077,
+      "BlockTrafficZone": 0.04154727793696275,
+      "DeployDecoy": 0.07808022922636103,
+      "Monitor": 0.01790830945558739,
+      "Remove": 0.12034383954154727,
+      "Restore": 0.5021489971346705,
+      "Sleep": 0.01504297994269341
+    }
+  },
+  "policy_input_sensitivity": {
+    "all": {
+      "count": 1758,
+      "mean_total_variation": 0.03451799963819725,
+      "mean_kl_full_static": 0.0050908531672417615,
+      "argmax_change_rate": 0.0,
+      "mean_absolute_value_change": 0.25065004751001474
+    },
+    "current_evidence_present": {
+      "count": 362,
+      "mean_total_variation": 0.037992128292587454,
+      "mean_kl_full_static": 0.005864977526616914,
+      "argmax_change_rate": 0.0,
+      "mean_absolute_value_change": 0.2734926412118733
+    },
+    "current_evidence_absent": {
+      "count": 1396,
+      "mean_total_variation": 0.03361711527366341,
+      "mean_kl_full_static": 0.004890113182933878,
+      "argmax_change_rate": 0.0,
+      "mean_absolute_value_change": 0.2447266815214239
+    },
+    "memory_evidence_present": {
+      "count": 1693,
+      "mean_total_variation": 0.035710397168193,
+      "mean_kl_full_static": 0.0052815871202979035,
+      "argmax_change_rate": 0.0,
+      "mean_absolute_value_change": 0.2600063391852787
+    }
+  },
+  "feature_group_input_sensitivity": {
+    "passive_event_now": {
+      "all_decisions": {
+        "count": 1758,
+        "mean_total_variation": 0.0002887865299387797,
+        "argmax_change_rate": 0.0
+      },
+      "group_present": {
+        "count": 172,
+        "mean_total_variation": 0.002950241475171128,
+        "argmax_change_rate": 0.0
+      }
+    },
+    "analysis_now": {
+      "all_decisions": {
+        "count": 1758,
+        "mean_total_variation": 0.0003407244694595084,
+        "argmax_change_rate": 0.0
+      },
+      "group_present": {
+        "count": 212,
+        "mean_total_variation": 0.0028243084758836426,
+        "argmax_change_rate": 0.0
+      }
+    },
+    "memory": {
+      "all_decisions": {
+        "count": 1758,
+        "mean_total_variation": 0.027706329273528285,
+        "argmax_change_rate": 0.0
+      },
+      "group_present": {
+        "count": 1693,
+        "mean_total_variation": 0.02877006371798763,
+        "argmax_change_rate": 0.0
+      }
+    },
+    "passive_event_memory": {
+      "all_decisions": {
+        "count": 1758,
+        "mean_total_variation": 0.02585238090144223,
+        "argmax_change_rate": 0.0
+      },
+      "group_present": {
+        "count": 1635,
+        "mean_total_variation": 0.02779722879462753,
+        "argmax_change_rate": 0.0
+      }
+    },
+    "analysis_memory": {
+      "all_decisions": {
+        "count": 1758,
+        "mean_total_variation": 0.003612801392750099,
+        "argmax_change_rate": 0.0
+      },
+      "group_present": {
+        "count": 1379,
+        "mean_total_variation": 0.004605692551549635,
+        "argmax_change_rate": 0.0
+      }
+    },
+    "temporal_markers": {
+      "all_decisions": {
+        "count": 1758,
+        "mean_total_variation": 0.006544933828353536,
+        "argmax_change_rate": 0.0
+      },
+      "group_present": {
+        "count": 1711,
+        "mean_total_variation": 0.00672471489203153,
+        "argmax_change_rate": 0.0
+      }
+    },
+    "observed_now": {
+      "all_decisions": {
+        "count": 1758,
+        "mean_total_variation": 0.0007541230048374475,
+        "argmax_change_rate": 0.0
+      },
+      "group_present": {
+        "count": 491,
+        "mean_total_variation": 0.0026997035557058944,
+        "argmax_change_rate": 0.0
+      }
+    },
+    "evidence_age": {
+      "all_decisions": {
+        "count": 1758,
+        "mean_total_variation": 0.006232895869964422,
+        "argmax_change_rate": 0.0
+      },
+      "group_present": {
+        "count": 1678,
+        "mean_total_variation": 0.00653004761393217,
+        "argmax_change_rate": 0.0
+      }
+    },
+    "decoy": {
+      "all_decisions": {
+        "count": 1758,
+        "mean_total_variation": 0.003723035579891483,
+        "argmax_change_rate": 0.0
+      },
+      "group_present": {
+        "count": 1109,
+        "mean_total_variation": 0.005901715694695738,
+        "argmax_change_rate": 0.0
+      }
+    }
+  },
+  "evidence_response": {
+    "first_same_host_action_observed": 713,
+    "first_same_host_action_observed_fraction": 0.775,
+    "median_first_same_host_action_latency": 34.0,
+    "same_host_response_within_0_fraction": 0.029347826086956522,
+    "same_host_response_within_1_fraction": 0.05543478260869565,
+    "same_host_response_within_5_fraction": 0.11739130434782609,
+    "same_host_response_within_10_fraction": 0.16847826086956522
+  },
+  "reward_association_not_causal": {
+    "target_current_evidence": {
+      "count": 27,
+      "mean_reward_next_1": -1.5925925925925926,
+      "mean_reward_next_5": -8.62962962962963,
+      "mean_reward_next_10": -17.25925925925926,
+      "mean_blue_reward_machine_next_5": -5.0,
+      "mean_action_cost_next_5": -3.6296296296296298
+    },
+    "current_context_but_other_host": {
+      "count": 252,
+      "mean_reward_next_1": -2.0992063492063493,
+      "mean_reward_next_5": -8.321428571428571,
+      "mean_reward_next_10": -16.071428571428573,
+      "mean_blue_reward_machine_next_5": -4.599206349206349,
+      "mean_action_cost_next_5": -3.7222222222222223
+    },
+    "no_current_or_memory_evidence": {
+      "count": 52,
+      "mean_reward_next_1": -1.8461538461538463,
+      "mean_reward_next_5": -6.846153846153846,
+      "mean_reward_next_10": -13.038461538461538,
+      "mean_blue_reward_machine_next_5": -3.0384615384615383,
+      "mean_action_cost_next_5": -3.8076923076923075
+    },
+    "target_memory_evidence": {
+      "count": 565,
+      "mean_reward_next_1": -2.033628318584071,
+      "mean_reward_next_5": -8.467256637168141,
+      "mean_reward_next_10": -16.761061946902654,
+      "mean_blue_reward_machine_next_5": -4.753982300884956,
+      "mean_action_cost_next_5": -3.713274336283186
+    }
+  },
+  "reward_breakdown": {
+    "total": -1915.0,
+    "blue_reward_machine": -1042.0,
+    "action_cost": -873.0
+  },
+  "action_completion": {
+    "AllowTrafficZone": {
+      "selected": 197,
+      "completed": 197,
+      "success_counts": {
+        "FALSE": 195,
+        "TRUE": 2
+      },
+      "mean_observed_duration": 1.0
+    },
+    "Analyse": {
+      "selected": 213,
+      "completed": 213,
+      "success_counts": {
+        "TRUE": 213
+      },
+      "mean_observed_duration": 2.0
+    },
+    "BlockTrafficZone": {
+      "selected": 74,
+      "completed": 74,
+      "success_counts": {
+        "FALSE": 52,
+        "TRUE": 22
+      },
+      "mean_observed_duration": 1.0
+    },
+    "DeployDecoy": {
+      "selected": 132,
+      "completed": 131,
+      "success_counts": {
+        "TRUE": 131
+      },
+      "mean_observed_duration": 2.0
+    },
+    "Monitor": {
+      "selected": 34,
+      "completed": 34,
+      "success_counts": {
+        "TRUE": 34
+      },
+      "mean_observed_duration": 1.0
+    },
+    "Remove": {
+      "selected": 208,
+      "completed": 208,
+      "success_counts": {
+        "TRUE": 208
+      },
+      "mean_observed_duration": 3.0
+    },
+    "Restore": {
+      "selected": 873,
+      "completed": 862,
+      "success_counts": {
+        "TRUE": 862
+      },
+      "mean_observed_duration": 5.0
+    },
+    "Sleep": {
+      "selected": 27,
+      "completed": 27,
+      "success_counts": {
+        "UNKNOWN": 27
+      },
+      "mean_observed_duration": 1.0
+    },
+    "semantic_traffic_summary": {
+      "completed": 271,
+      "false_completions": 247,
+      "false_completion_rate": 0.9114391143911439
+    }
+  },
+  "eval_seed": 10000,
+  "action_seed": 10000,
+  "checkpoint_path": "runs/canonical_2x2_random_host_20k/A_v1_mask_off/seed_42/checkpoint.pt"
+}

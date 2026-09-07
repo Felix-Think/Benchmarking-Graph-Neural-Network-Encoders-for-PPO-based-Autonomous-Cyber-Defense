@@ -1,0 +1,33 @@
+{
+  "full": {
+    "mean": -1034.3333333333333,
+    "std": 397.5088538496833
+  },
+  "full_minus_static_only": {
+    "bootstrap_ci95": [
+      -194.57,
+      135.67
+    ],
+    "mean_delta": -30.0,
+    "paired_dz": -0.0635,
+    "paired_t_p": 0.730308206715788,
+    "wilcoxon_p": 0.7921590935438871,
+    "wins_ties_losses": [
+      14,
+      0,
+      16
+    ]
+  },
+  "protocol": {
+    "bootstrap_resamples": 20000,
+    "bootstrap_seed": 20260821,
+    "full_file": "evaluation_stochastic.json",
+    "paired_episodes": 30,
+    "static_file": "observation_gate_static_only_stochastic.json"
+  },
+  "static_only": {
+    "mean": -1004.3333333333334,
+    "std": 423.25408707090145
+  },
+  "strict_gate_passed": false
+}

@@ -1,0 +1,437 @@
+from __future__ import annotations
+
+from collections.abc import Mapping
+
+import torch
+import torch.nn as nn
+from torch_geometric.nn import GCNConv
+
+from acd_benchmark.cyber.canonical_observation import (
+    GLOBAL_FEATURES,
+    MAX_LOCAL_HOSTS,
+    NODE_FEATURES,
+    NUM_NODES,
+    NUM_SUBNET_NODES,
+    flat_observation_dim,
+)
+from acd_benchmark.cyber.canonical_observation_v2 import (
+    CANONICAL_SCHEMAS,
+    V2_NODE_FEATURES,
+    v2_flat_observation_dim,
+)
+from acd_benchmark.cyber.cc4_structured_action_env import (
+    EDGE_ACTIONS,
+    GLOBAL_ACTIONS,
+    HOST_ACTIONS,
+    NUM_STRUCTURED_ACTIONS,
+    STRUCTURED_EDGE_SLOTS,
+    STRUCTURED_HOST_SLOTS,
+)
+from acd_benchmark.rl.policies.actor_critic import CategoricalActorCritic
+from acd_benchmark.rl.ppo.init_weight import init_weight
+
+
+class StructuredActionActorCritic(CategoricalActorCritic):
+    """Common host/edge/global action scorer for canonical encoders."""
+
+    def __init__(
+        self,
+        observation_dim: int,
+        node_embedding_dim: int,
+        context_dim: int = 128,
+        head_hidden_dim: int = 128,
+        canonical_schema: str = "v2",
+    ):
+        super().__init__()
+        if canonical_schema not in CANONICAL_SCHEMAS:
+            raise ValueError(f"canonical_schema must be one of {CANONICAL_SCHEMAS}")
+        self.canonical_schema = canonical_schema
+        self.node_feature_names = (
+            NODE_FEATURES if canonical_schema == "v1" else V2_NODE_FEATURES
+        )
+        expected_observation_dim = (
+            flat_observation_dim()
+            if canonical_schema == "v1"
+            else v2_flat_observation_dim()
+        )
+        if observation_dim != expected_observation_dim:
+            raise ValueError(
+                f"Expected canonical dimension {expected_observation_dim}, "
+                f"received {observation_dim}"
+            )
+        self.observation_dim = observation_dim
+        self.node_embedding_dim = node_embedding_dim
+        self.context_dim = context_dim
+        self.head_hidden_dim = head_hidden_dim
+        self._exists_index = self.node_feature_names.index("exists")
+        self._controlled_index = self.node_feature_names.index("controlled")
+
+        self.context_encoder = nn.Sequential(
+            nn.Linear(node_embedding_dim + len(GLOBAL_FEATURES), context_dim),
+            nn.ReLU(),
+        )
+        self.host_action_head = nn.Sequential(
+            nn.Linear(node_embedding_dim + context_dim, head_hidden_dim),
+            nn.ReLU(),
+            nn.Linear(head_hidden_dim, len(HOST_ACTIONS)),
+        )
+        self.edge_action_head = nn.Sequential(
+            nn.Linear(
+                2 * node_embedding_dim + context_dim + 3,
+                head_hidden_dim,
+            ),
+            nn.ReLU(),
+            nn.Linear(head_hidden_dim, len(EDGE_ACTIONS)),
+        )
+        self.global_action_head = nn.Sequential(
+            nn.Linear(context_dim, head_hidden_dim),
+            nn.ReLU(),
+            nn.Linear(head_hidden_dim, len(GLOBAL_ACTIONS)),
+        )
+        self.critic = nn.Sequential(
+            nn.Linear(context_dim, head_hidden_dim),
+            nn.ReLU(),
+            nn.Linear(head_hidden_dim, 1),
+        )
+        self.context_encoder.apply(init_weight)
+        self.host_action_head.apply(init_weight)
+        self.edge_action_head.apply(init_weight)
+        self.global_action_head.apply(init_weight)
+        self.critic.apply(init_weight)
+
+    def _slices(self) -> dict[str, slice]:
+        node_size = NUM_NODES * len(self.node_feature_names)
+        membership_size = MAX_LOCAL_HOSTS * NUM_SUBNET_NODES
+        matrix_size = NUM_SUBNET_NODES * NUM_SUBNET_NODES
+        membership_start = node_size
+        structural_start = membership_start + membership_size
+        communication_start = structural_start + matrix_size
+        firewall_start = communication_start + matrix_size
+        global_start = firewall_start + matrix_size
+        return {
+            "nodes": slice(0, node_size),
+            "membership": slice(membership_start, structural_start),
+            "structural": slice(structural_start, communication_start),
+            "communication": slice(communication_start, firewall_start),
+            "firewall": slice(firewall_start, global_start),
+            "global": slice(global_start, self.observation_dim),
+        }
+
+    def _unpack(self, observation: torch.Tensor):
+        slices = self._slices()
+        batch_size = observation.shape[0]
+        nodes = observation[:, slices["nodes"]].reshape(
+            batch_size,
+            NUM_NODES,
+            len(self.node_feature_names),
+        )
+        membership = observation[:, slices["membership"]].reshape(
+            batch_size,
+            MAX_LOCAL_HOSTS,
+            NUM_SUBNET_NODES,
+        )
+        matrices = {
+            name: observation[:, slices[name]].reshape(
+                batch_size,
+                NUM_SUBNET_NODES,
+                NUM_SUBNET_NODES,
+            )
+            for name in ("structural", "communication", "firewall")
+        }
+        return (
+            nodes,
+            membership,
+            matrices["structural"],
+            matrices["communication"],
+            matrices["firewall"],
+            observation[:, slices["global"]],
+        )
+
+    def encode_nodes(
+        self,
+        nodes: torch.Tensor,
+        membership: torch.Tensor,
+        structural: torch.Tensor,
+    ) -> torch.Tensor:
+        raise NotImplementedError
+
+    @staticmethod
+    def _controlled_subnet_slots(
+        nodes: torch.Tensor,
+        controlled_index: int,
+    ) -> torch.Tensor:
+        subnet_indices = torch.arange(
+            NUM_SUBNET_NODES,
+            device=nodes.device,
+        ).unsqueeze(0)
+        controlled = nodes[
+            :, :NUM_SUBNET_NODES, controlled_index
+        ] > 0.5
+        # Controlled subnet indices come first in ascending canonical order.
+        # Remaining entries only pad single-subnet agents and are action-masked.
+        scores = controlled.float() * 100.0 - subnet_indices.float()
+        return torch.argsort(scores, dim=1, descending=True)[:, :3]
+
+    def _edge_action_features(
+        self,
+        nodes: torch.Tensor,
+        node_embeddings: torch.Tensor,
+        context: torch.Tensor,
+        structural: torch.Tensor,
+        communication: torch.Tensor,
+        firewall: torch.Tensor,
+    ) -> torch.Tensor:
+        controlled_slots = self._controlled_subnet_slots(
+            nodes,
+            self._controlled_index,
+        )
+        batch_size = nodes.shape[0]
+        subnet_indices = torch.arange(
+            NUM_SUBNET_NODES,
+            device=nodes.device,
+        ).view(1, 1, NUM_SUBNET_NODES)
+        all_sources = subnet_indices.expand(batch_size, 3, -1)
+        destination_grid = controlled_slots.unsqueeze(-1).expand(-1, -1, 8)
+        sources = all_sources[
+            all_sources != controlled_slots.unsqueeze(-1)
+        ].reshape(batch_size, STRUCTURED_EDGE_SLOTS)
+        destinations = destination_grid.reshape(
+            batch_size,
+            STRUCTURED_EDGE_SLOTS,
+        )
+        batch_indices = torch.arange(
+            batch_size,
+            device=nodes.device,
+        ).unsqueeze(1)
+
+        source_embeddings = node_embeddings[batch_indices, sources]
+        destination_embeddings = node_embeddings[batch_indices, destinations]
+        relations = torch.stack(
+            (
+                structural[batch_indices, sources, destinations],
+                communication[batch_indices, sources, destinations],
+                firewall[batch_indices, sources, destinations],
+            ),
+            dim=-1,
+        )
+        features = torch.cat(
+            (
+                source_embeddings,
+                destination_embeddings,
+                context.unsqueeze(1).expand(-1, STRUCTURED_EDGE_SLOTS, -1),
+                relations,
+            ),
+            dim=-1,
+        )
+        if features.shape[1] != STRUCTURED_EDGE_SLOTS:
+            raise AssertionError(f"Unexpected edge slots: {features.shape}")
+        return features
+
+    def forward(
+        self,
+        observation: torch.Tensor,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        if observation.ndim == 1:
+            observation = observation.unsqueeze(0)
+        if observation.ndim != 2 or observation.shape[-1] != self.observation_dim:
+            raise ValueError(
+                "Structured canonical observation must have shape "
+                f"(batch, {self.observation_dim}), received "
+                f"{tuple(observation.shape)}"
+            )
+
+        observation = observation.float()
+        (
+            nodes,
+            membership,
+            structural,
+            communication,
+            firewall,
+            global_features,
+        ) = self._unpack(observation)
+        node_embeddings = self.encode_nodes(nodes, membership, structural)
+        exists = nodes[:, :, self._exists_index].unsqueeze(-1)
+        pooled = (node_embeddings * exists).sum(dim=1) / exists.sum(
+            dim=1
+        ).clamp_min(1.0)
+        context = self.context_encoder(torch.cat((pooled, global_features), dim=-1))
+
+        host_embeddings = node_embeddings[
+            :,
+            NUM_SUBNET_NODES : NUM_SUBNET_NODES + STRUCTURED_HOST_SLOTS,
+        ]
+        host_context = context.unsqueeze(1).expand(
+            -1,
+            STRUCTURED_HOST_SLOTS,
+            -1,
+        )
+        host_logits = self.host_action_head(
+            torch.cat((host_embeddings, host_context), dim=-1)
+        )
+        host_logits = host_logits.transpose(1, 2).reshape(
+            observation.shape[0],
+            -1,
+        )
+
+        edge_features = self._edge_action_features(
+            nodes,
+            node_embeddings,
+            context,
+            structural,
+            communication,
+            firewall,
+        )
+        edge_logits = self.edge_action_head(edge_features)
+        edge_logits = edge_logits.transpose(1, 2).reshape(
+            observation.shape[0],
+            -1,
+        )
+        global_logits = self.global_action_head(context)
+        logits = torch.cat((host_logits, edge_logits, global_logits), dim=-1)
+        if logits.shape[-1] != NUM_STRUCTURED_ACTIONS:
+            raise AssertionError(f"Unexpected action logits: {logits.shape}")
+        return logits, self.critic(context)
+
+
+class StructuredNodeMLPActorCritic(StructuredActionActorCritic):
+    """Shared per-node MLP control with no graph message passing."""
+
+    def __init__(
+        self,
+        observation_dim: int,
+        node_hidden_dim: int = 128,
+        node_embedding_dim: int = 64,
+        context_dim: int = 128,
+        head_hidden_dim: int = 128,
+        canonical_schema: str = "v2",
+    ):
+        super().__init__(
+            observation_dim=observation_dim,
+            node_embedding_dim=node_embedding_dim,
+            context_dim=context_dim,
+            head_hidden_dim=head_hidden_dim,
+            canonical_schema=canonical_schema,
+        )
+        self.node_hidden_dim = node_hidden_dim
+        self.node_encoder = nn.Sequential(
+            nn.Linear(len(self.node_feature_names), node_hidden_dim),
+            nn.ReLU(),
+            nn.Linear(node_hidden_dim, node_embedding_dim),
+            nn.ReLU(),
+        )
+        self.node_encoder.apply(init_weight)
+
+    def encode_nodes(
+        self,
+        nodes: torch.Tensor,
+        membership: torch.Tensor,
+        structural: torch.Tensor,
+    ) -> torch.Tensor:
+        del membership, structural
+        return self.node_encoder(nodes)
+
+
+class StructuredGCNActorCritic(StructuredActionActorCritic):
+    """GCN encoder with the same structured action scorer as NodeMLP."""
+
+    def __init__(
+        self,
+        observation_dim: int,
+        gcn_hidden_dim: int = 64,
+        gcn_layers: int = 2,
+        node_embedding_dim: int = 64,
+        context_dim: int = 128,
+        head_hidden_dim: int = 128,
+        canonical_schema: str = "v2",
+    ):
+        super().__init__(
+            observation_dim=observation_dim,
+            node_embedding_dim=node_embedding_dim,
+            context_dim=context_dim,
+            head_hidden_dim=head_hidden_dim,
+            canonical_schema=canonical_schema,
+        )
+        if gcn_layers <= 0:
+            raise ValueError("gcn_layers must be positive")
+        self.gcn_hidden_dim = gcn_hidden_dim
+        self.gcn_layers = gcn_layers
+        dimensions = [
+            len(self.node_feature_names),
+            *([gcn_hidden_dim] * (gcn_layers - 1)),
+            node_embedding_dim,
+        ]
+        self.convolutions = nn.ModuleList(
+            GCNConv(input_dim, output_dim)
+            for input_dim, output_dim in zip(
+                dimensions[:-1],
+                dimensions[1:],
+                strict=True,
+            )
+        )
+
+    @staticmethod
+    def _batched_edge_index(
+        membership: torch.Tensor,
+        structural: torch.Tensor,
+    ) -> torch.Tensor:
+        structural_edges = (structural > 0).nonzero(as_tuple=False)
+        membership_edges = (membership > 0).nonzero(as_tuple=False)
+        sources: list[torch.Tensor] = []
+        destinations: list[torch.Tensor] = []
+        if structural_edges.numel() > 0:
+            offsets = structural_edges[:, 0] * NUM_NODES
+            sources.append(offsets + structural_edges[:, 1])
+            destinations.append(offsets + structural_edges[:, 2])
+        if membership_edges.numel() > 0:
+            offsets = membership_edges[:, 0] * NUM_NODES
+            host_nodes = offsets + NUM_SUBNET_NODES + membership_edges[:, 1]
+            subnet_nodes = offsets + membership_edges[:, 2]
+            sources.extend((host_nodes, subnet_nodes))
+            destinations.extend((subnet_nodes, host_nodes))
+        return torch.stack(
+            (torch.cat(sources), torch.cat(destinations)),
+            dim=0,
+        ).long()
+
+    def encode_nodes(
+        self,
+        nodes: torch.Tensor,
+        membership: torch.Tensor,
+        structural: torch.Tensor,
+    ) -> torch.Tensor:
+        edge_index = self._batched_edge_index(membership, structural)
+        embeddings = nodes.reshape(-1, len(self.node_feature_names))
+        for convolution in self.convolutions:
+            embeddings = torch.relu(convolution(embeddings, edge_index))
+        return embeddings.reshape(
+            nodes.shape[0],
+            NUM_NODES,
+            self.node_embedding_dim,
+        )
+
+
+def build_structured_nodemlp_policy_from_config(
+    config: Mapping[str, object],
+) -> StructuredNodeMLPActorCritic:
+    return StructuredNodeMLPActorCritic(
+        observation_dim=int(config["observation_dim"]),
+        node_hidden_dim=int(config["node_hidden_dim"]),
+        node_embedding_dim=int(config["node_embedding_dim"]),
+        context_dim=int(config["context_dim"]),
+        head_hidden_dim=int(config["head_hidden_dim"]),
+        canonical_schema=str(config.get("canonical_schema", "v2")),
+    )
+
+
+def build_structured_gcn_policy_from_config(
+    config: Mapping[str, object],
+) -> StructuredGCNActorCritic:
+    return StructuredGCNActorCritic(
+        observation_dim=int(config["observation_dim"]),
+        gcn_hidden_dim=int(config["gcn_hidden_dim"]),
+        gcn_layers=int(config["gcn_layers"]),
+        node_embedding_dim=int(config["node_embedding_dim"]),
+        context_dim=int(config["context_dim"]),
+        head_hidden_dim=int(config["head_hidden_dim"]),
+        canonical_schema=str(config.get("canonical_schema", "v2")),
+    )

@@ -1,0 +1,336 @@
+{
+  "policy_type": "gcn",
+  "canonical_schema": "v1",
+  "semantic_action_mask": false,
+  "training_seed": 42,
+  "environment_distribution": "random_host",
+  "episodes": 3,
+  "mean_return": -769.3333333333334,
+  "std_return": 164.29715626131681,
+  "episode_returns": [
+    -559.0,
+    -789.0,
+    -960.0
+  ],
+  "ticks": 1197,
+  "decisions": 1839,
+  "evidence_occurrences": 882,
+  "event_type_counts": {
+    "analysis_result_now": 155,
+    "connection_event_now": 541,
+    "max_file_density_now": 16,
+    "process_event_now": 295
+  },
+  "event_buffer_semantics": {
+    "old_observed_event_items_at_evidence_ticks": 2145,
+    "current_unobserved_event_items_at_evidence_ticks": 0,
+    "unobserved_fraction": 0.0
+  },
+  "decision_context": {
+    "current_evidence_present": 331,
+    "current_evidence_present_fraction": 0.17998912452419794,
+    "memory_evidence_present": 1783,
+    "memory_evidence_present_fraction": 0.9695486677542142,
+    "host_targeted": 1341,
+    "target_current_evidence": 49,
+    "target_current_evidence_given_host_action_and_current_context": 0.20502092050209206,
+    "uniform_host_current_chance": 0.09262911002635345,
+    "target_memory_evidence": 572,
+    "target_memory_evidence_given_host_action_and_memory_context": 0.4420401854714065,
+    "uniform_host_memory_chance": 0.4775101531697586
+  },
+  "action_proportions": {
+    "all": {
+      "AllowTrafficZone": 0.24796084828711257,
+      "Analyse": 0.08537248504622078,
+      "BlockTrafficZone": 0.019032082653616094,
+      "DeployDecoy": 0.043501903208265365,
+      "Monitor": 0.002175095160413268,
+      "Remove": 0.13213703099510604,
+      "Restore": 0.46818923327895595,
+      "Sleep": 0.0016313213703099511
+    },
+    "current_evidence_present": {
+      "AllowTrafficZone": 0.256797583081571,
+      "Analyse": 0.10876132930513595,
+      "BlockTrafficZone": 0.021148036253776436,
+      "DeployDecoy": 0.03323262839879154,
+      "Remove": 0.12386706948640483,
+      "Restore": 0.4561933534743202
+    },
+    "current_evidence_absent": {
+      "AllowTrafficZone": 0.2460212201591512,
+      "Analyse": 0.08023872679045092,
+      "BlockTrafficZone": 0.01856763925729443,
+      "DeployDecoy": 0.045755968169761276,
+      "Monitor": 0.002652519893899204,
+      "Remove": 0.13395225464190982,
+      "Restore": 0.4708222811671088,
+      "Sleep": 0.001989389920424403
+    }
+  },
+  "policy_input_sensitivity": {
+    "all": {
+      "count": 1839,
+      "mean_total_variation": 0.18124232637187512,
+      "mean_kl_full_static": 0.15168129930980845,
+      "argmax_change_rate": 0.4274061990212072,
+      "mean_absolute_value_change": 0.8527972159533478
+    },
+    "current_evidence_present": {
+      "count": 331,
+      "mean_total_variation": 0.1958390756536928,
+      "mean_kl_full_static": 0.17002412127131306,
+      "argmax_change_rate": 0.48942598187311176,
+      "mean_absolute_value_change": 0.922014262020768
+    },
+    "current_evidence_absent": {
+      "count": 1508,
+      "mean_total_variation": 0.17803839798176793,
+      "mean_kl_full_static": 0.14765512287130841,
+      "argmax_change_rate": 0.41379310344827586,
+      "mean_absolute_value_change": 0.8376043497409366
+    },
+    "memory_evidence_present": {
+      "count": 1783,
+      "mean_total_variation": 0.18641855907642121,
+      "mean_kl_full_static": 0.15631938714137755,
+      "argmax_change_rate": 0.44083006169377453,
+      "mean_absolute_value_change": 0.8781983985435542
+    }
+  },
+  "feature_group_input_sensitivity": {
+    "passive_event_now": {
+      "all_decisions": {
+        "count": 1839,
+        "mean_total_variation": 0.0005569756459115309,
+        "argmax_change_rate": 0.0027188689505165853
+      },
+      "group_present": {
+        "count": 198,
+        "mean_total_variation": 0.005171464468326626,
+        "argmax_change_rate": 0.025252525252525252
+      }
+    },
+    "analysis_now": {
+      "all_decisions": {
+        "count": 1839,
+        "mean_total_variation": 0.00015304313055409356,
+        "argmax_change_rate": 0.0
+      },
+      "group_present": {
+        "count": 155,
+        "mean_total_variation": 0.001813596846806186,
+        "argmax_change_rate": 0.0
+      }
+    },
+    "memory": {
+      "all_decisions": {
+        "count": 1839,
+        "mean_total_variation": 0.12023458442404679,
+        "argmax_change_rate": 0.3735725938009788
+      },
+      "group_present": {
+        "count": 1783,
+        "mean_total_variation": 0.12401087513972811,
+        "argmax_change_rate": 0.3853056646102075
+      }
+    },
+    "passive_event_memory": {
+      "all_decisions": {
+        "count": 1839,
+        "mean_total_variation": 0.11037960416578559,
+        "argmax_change_rate": 0.3703099510603589
+      },
+      "group_present": {
+        "count": 1768,
+        "mean_total_variation": 0.11481226178342308,
+        "argmax_change_rate": 0.38518099547511314
+      }
+    },
+    "analysis_memory": {
+      "all_decisions": {
+        "count": 1839,
+        "mean_total_variation": 0.008947437070929338,
+        "argmax_change_rate": 0.025013594344752584
+      },
+      "group_present": {
+        "count": 1291,
+        "mean_total_variation": 0.012745344824692209,
+        "argmax_change_rate": 0.03563129357087529
+      }
+    },
+    "temporal_markers": {
+      "all_decisions": {
+        "count": 1839,
+        "mean_total_variation": 0.06163499987078165,
+        "argmax_change_rate": 0.24687330070690594
+      },
+      "group_present": {
+        "count": 1798,
+        "mean_total_variation": 0.06304046563117571,
+        "argmax_change_rate": 0.2525027808676307
+      }
+    },
+    "observed_now": {
+      "all_decisions": {
+        "count": 1839,
+        "mean_total_variation": 0.0014871889297363855,
+        "argmax_change_rate": 0.0016313213703099511
+      },
+      "group_present": {
+        "count": 414,
+        "mean_total_variation": 0.0066054549027017235,
+        "argmax_change_rate": 0.007246376811594203
+      }
+    },
+    "evidence_age": {
+      "all_decisions": {
+        "count": 1839,
+        "mean_total_variation": 0.06167747117063899,
+        "argmax_change_rate": 0.2490483958673192
+      },
+      "group_present": {
+        "count": 1774,
+        "mean_total_variation": 0.06393734907542731,
+        "argmax_change_rate": 0.25817361894024804
+      }
+    },
+    "decoy": {
+      "all_decisions": {
+        "count": 1839,
+        "mean_total_variation": 0.009640096505370415,
+        "argmax_change_rate": 0.037520391517128875
+      },
+      "group_present": {
+        "count": 787,
+        "mean_total_variation": 0.022525983401651115,
+        "argmax_change_rate": 0.08767471410419314
+      }
+    }
+  },
+  "evidence_response": {
+    "first_same_host_action_observed": 663,
+    "first_same_host_action_observed_fraction": 0.7517006802721088,
+    "median_first_same_host_action_latency": 28.0,
+    "same_host_response_within_0_fraction": 0.05555555555555555,
+    "same_host_response_within_1_fraction": 0.07596371882086168,
+    "same_host_response_within_5_fraction": 0.15192743764172337,
+    "same_host_response_within_10_fraction": 0.2222222222222222
+  },
+  "reward_association_not_causal": {
+    "target_current_evidence": {
+      "count": 49,
+      "mean_reward_next_1": -2.795918367346939,
+      "mean_reward_next_5": -12.938775510204081,
+      "mean_reward_next_10": -25.93877551020408,
+      "mean_blue_reward_machine_next_5": -9.142857142857142,
+      "mean_action_cost_next_5": -3.795918367346939
+    },
+    "current_context_but_other_host": {
+      "count": 190,
+      "mean_reward_next_1": -2.7526315789473683,
+      "mean_reward_next_5": -10.447368421052632,
+      "mean_reward_next_10": -19.9,
+      "mean_blue_reward_machine_next_5": -6.773684210526316,
+      "mean_action_cost_next_5": -3.6736842105263157
+    },
+    "no_current_or_memory_evidence": {
+      "count": 47,
+      "mean_reward_next_1": -1.872340425531915,
+      "mean_reward_next_5": -5.042553191489362,
+      "mean_reward_next_10": -9.51063829787234,
+      "mean_blue_reward_machine_next_5": -1.0425531914893618,
+      "mean_action_cost_next_5": -4.0
+    },
+    "target_memory_evidence": {
+      "count": 572,
+      "mean_reward_next_1": -2.6468531468531467,
+      "mean_reward_next_5": -10.645104895104895,
+      "mean_reward_next_10": -20.958041958041957,
+      "mean_blue_reward_machine_next_5": -6.958041958041958,
+      "mean_action_cost_next_5": -3.687062937062937
+    }
+  },
+  "reward_breakdown": {
+    "total": -2308.0,
+    "blue_reward_machine": -1447.0,
+    "action_cost": -861.0
+  },
+  "action_completion": {
+    "AllowTrafficZone": {
+      "selected": 456,
+      "completed": 456,
+      "success_counts": {
+        "FALSE": 441,
+        "TRUE": 15
+      },
+      "mean_observed_duration": 1.0
+    },
+    "Analyse": {
+      "selected": 157,
+      "completed": 155,
+      "success_counts": {
+        "TRUE": 155
+      },
+      "mean_observed_duration": 2.0
+    },
+    "BlockTrafficZone": {
+      "selected": 35,
+      "completed": 35,
+      "success_counts": {
+        "FALSE": 12,
+        "TRUE": 23
+      },
+      "mean_observed_duration": 1.0
+    },
+    "DeployDecoy": {
+      "selected": 80,
+      "completed": 80,
+      "success_counts": {
+        "TRUE": 80
+      },
+      "mean_observed_duration": 2.0
+    },
+    "Monitor": {
+      "selected": 4,
+      "completed": 4,
+      "success_counts": {
+        "TRUE": 4
+      },
+      "mean_observed_duration": 1.0
+    },
+    "Remove": {
+      "selected": 243,
+      "completed": 242,
+      "success_counts": {
+        "TRUE": 242
+      },
+      "mean_observed_duration": 3.0
+    },
+    "Restore": {
+      "selected": 861,
+      "completed": 855,
+      "success_counts": {
+        "TRUE": 855
+      },
+      "mean_observed_duration": 5.0
+    },
+    "Sleep": {
+      "selected": 3,
+      "completed": 3,
+      "success_counts": {
+        "UNKNOWN": 3
+      },
+      "mean_observed_duration": 1.0
+    },
+    "semantic_traffic_summary": {
+      "completed": 491,
+      "false_completions": 453,
+      "false_completion_rate": 0.9226069246435845
+    }
+  },
+  "eval_seed": 10000,
+  "action_seed": 10000,
+  "checkpoint_path": "runs/canonical_gcn_random_pivot_100k/seed_42/checkpoint.pt"
+}

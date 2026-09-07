@@ -1,0 +1,131 @@
+{
+  "protocol": {
+    "training_seed": 43,
+    "requested_simulator_steps": 84000,
+    "actual_simulator_steps": 84189,
+    "updates": 211,
+    "episode_steps": 400,
+    "canonical_variant": "action_aware",
+    "observation_dim": 1489,
+    "parameter_count": 271603,
+    "periodic_episode_seeds": "20000-20009",
+    "held_out_episode_seeds": "10000-10099",
+    "held_out_episodes": 100
+  },
+  "deterministic_held_out": {
+    "untrained": {
+      "mean": -3373.13,
+      "std": 808.51
+    },
+    "static_only": {
+      "mean": -3393.55,
+      "std": 915.76
+    },
+    "final": {
+      "mean": -3754.3,
+      "std": 902.19
+    },
+    "best": {
+      "mean": -3393.34,
+      "std": 917.04
+    },
+    "flat_seed_42_context_only": {
+      "mean": -3208.7,
+      "std": 919.75
+    }
+  },
+  "stochastic_held_out": {
+    "final": {
+      "mean": -1358.1,
+      "std": 485.61
+    },
+    "best": {
+      "mean": -1131.01,
+      "std": 447.36
+    }
+  },
+  "paired_comparisons": {
+    "best_minus_untrained": {
+      "mean_delta": -20.21,
+      "bootstrap_ci95": [
+        -221.18,
+        186.45
+      ],
+      "paired_dz": -0.0194,
+      "wins_ties_losses": [
+        45,
+        0,
+        55
+      ],
+      "paired_t_p": 0.8469309521883348,
+      "wilcoxon_p": 0.5247164751022144
+    },
+    "best_minus_static_only": {
+      "mean_delta": 0.21,
+      "bootstrap_ci95": [
+        -2.9,
+        3.94
+      ],
+      "paired_dz": 0.012,
+      "wins_ties_losses": [
+        2,
+        89,
+        9
+      ],
+      "paired_t_p": 0.9044181344874076,
+      "wilcoxon_p": 0.2857652190231508
+    },
+    "static_only_minus_untrained": {
+      "mean_delta": -20.42,
+      "bootstrap_ci95": [
+        -223.11,
+        189.24
+      ],
+      "paired_dz": -0.0195,
+      "wins_ties_losses": [
+        46,
+        0,
+        54
+      ],
+      "paired_t_p": 0.845495255046851,
+      "wilcoxon_p": 0.5348500270670291
+    },
+    "final_minus_untrained": {
+      "mean_delta": -381.17,
+      "bootstrap_ci95": [
+        -585.82,
+        -174.56
+      ],
+      "paired_dz": -0.3627,
+      "wins_ties_losses": [
+        30,
+        0,
+        70
+      ],
+      "paired_t_p": 0.0004547960271016706,
+      "wilcoxon_p": 0.0004443100833681383
+    },
+    "best_minus_flat_reference": {
+      "mean_delta": -184.64,
+      "bootstrap_ci95": [
+        -368.77,
+        -3.7
+      ],
+      "paired_dz": -0.1981,
+      "wins_ties_losses": [
+        45,
+        1,
+        54
+      ],
+      "paired_t_p": 0.05031580850154524,
+      "wilcoxon_p": 0.04329209980783938
+    }
+  },
+  "qualification": {
+    "learns_from_canonical_seed_43": false,
+    "uses_dynamic_canonical_evidence_seed_43": false,
+    "stable_at_final_checkpoint": false,
+    "paper_level_multi_seed_evidence": false,
+    "better_than_flat_seed_42_context_only": false
+  }
+}

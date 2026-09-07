@@ -1,0 +1,10 @@
+{
+  "total_simulator_steps": 100149,
+  "total_policy_decisions": 171271,
+  "total_episodes": 251,
+  "total_updates": 251,
+  "parameter_count": 292339,
+  "best_checkpoint_path": null,
+  "best_periodic_evaluation": null,
+  "recovery_note": "Evaluation was rerun from the final checkpoint after fixing CAGE 4 session reassignment for host observations without a Sessions field."
+}

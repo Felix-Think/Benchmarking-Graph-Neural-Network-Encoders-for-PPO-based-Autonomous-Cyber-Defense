@@ -13,26 +13,11 @@ class MLP(nn.Module):
         )
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.net(x)
-        
-class ActorCritic(nn.Module):
-    def __init__(self, latent_dim : int, num_actions : int, head_hidden_dim: int = 128,):
-        super().__init__()
 
-        self.actor = MLP(input_dim = latent_dim, output_dim = num_actions, head_hidden_dim = head_hidden_dim)
-        self.critic = MLP(input_dim = latent_dim, output_dim = 1, head_hidden_dim = head_hidden_dim)
 
-        self.actor.apply(init_weight)
-        self.critic.apply(init_weight)
+class CategoricalActorCritic(nn.Module):
+    """Shared masked-categorical action API for PPO actor-critic policies."""
 
-    def encode(self, observation : torch.Tensor) -> torch.Tensor:
-        raise NotImplementedError
-    
-    def forward(self, observation: torch.Tensor,) -> tuple[torch.Tensor, torch.Tensor]:
-        latent = self.encode(observation)
-        logits = self.actor(latent)
-        value = self.critic(latent)
-        return logits, value
-    
     def get_action_and_value(
         self,
         observation: torch.Tensor,
@@ -107,4 +92,39 @@ class ActorCritic(nn.Module):
     def get_value(self, observation: torch.Tensor):
         _, value = self.forward(observation)
         return value.squeeze(-1)
-    
+
+
+class ActorCritic(CategoricalActorCritic):
+    def __init__(
+        self,
+        latent_dim: int,
+        num_actions: int,
+        head_hidden_dim: int = 128,
+    ):
+        super().__init__()
+
+        self.actor = MLP(
+            input_dim=latent_dim,
+            output_dim=num_actions,
+            head_hidden_dim=head_hidden_dim,
+        )
+        self.critic = MLP(
+            input_dim=latent_dim,
+            output_dim=1,
+            head_hidden_dim=head_hidden_dim,
+        )
+
+        self.actor.apply(init_weight)
+        self.critic.apply(init_weight)
+
+    def encode(self, observation: torch.Tensor) -> torch.Tensor:
+        raise NotImplementedError
+
+    def forward(
+        self,
+        observation: torch.Tensor,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        latent = self.encode(observation)
+        logits = self.actor(latent)
+        value = self.critic(latent)
+        return logits, value

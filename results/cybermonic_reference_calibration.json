@@ -1,0 +1,12 @@
+{
+  "reference": "KEEP/Cybermonic pretrained submission",
+  "cyborg_version": "4.0",
+  "episode_steps": 500,
+  "environment_seed": 30000,
+  "episodes": 2,
+  "workers": 1,
+  "evaluation_mode": "stochastic policy sampling",
+  "mean_return": -117.5,
+  "sample_standard_deviation": 30.405591591021544,
+  "interpretation": "Compatibility smoke only; two episodes are not a performance estimate."
+}

@@ -138,6 +138,7 @@ def collect_rollout(env, policy, seed, gamma=0.99, gae_lambda = 0.95, reward_sca
 
     team_return = 0.0
     simulator_steps = 0
+    reward_agent = env.possible_agents[0]
 
     while True:
         actions = {}
@@ -154,7 +155,7 @@ def collect_rollout(env, policy, seed, gamma=0.99, gae_lambda = 0.95, reward_sca
                 dtype=torch.float32,
                 device=device,
             )
-            action_mask = torch.as_tensor(
+            action_mask = torch.as_tensor(  
                 infos[agent]["action_mask"],
                 dtype=torch.bool,
                 device=device,
@@ -222,9 +223,9 @@ def collect_rollout(env, policy, seed, gamma=0.99, gae_lambda = 0.95, reward_sca
 
                 del pending[agent]
 
-        # Reward đang là team reward và giống nhau cho 5 agent.
-        # Không được sum rewards.values(), nếu không score bị nhân 5.
-        team_return += float(rewards["blue_agent_0"])
+        # Reward là team reward và giống nhau cho mọi Blue agent.
+        # Không sum rewards.values(), nếu không score bị nhân số agent.
+        team_return += float(rewards[reward_agent])
 
         if episode_done:
             break

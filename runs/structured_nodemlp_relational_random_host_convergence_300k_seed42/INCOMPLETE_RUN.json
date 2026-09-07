@@ -1,0 +1,8 @@
+{
+  "status": "aborted",
+  "reason": "Periodic evaluation every 10 updates caused unnecessary runtime and thermal load.",
+  "last_completed_update": 10,
+  "last_completed_training_step": 19960,
+  "usable_for_inference": false,
+  "replacement_protocol": "300k ticks with periodic evaluation every 25 updates"
+}

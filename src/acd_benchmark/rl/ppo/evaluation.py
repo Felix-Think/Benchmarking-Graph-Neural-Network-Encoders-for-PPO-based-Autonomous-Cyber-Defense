@@ -237,28 +237,14 @@ def evaluate_policy_modes(
         deterministic=True,
     )
 
-    cpu_rng_state = torch.random.get_rng_state()
-    cuda_rng_states = (
-        torch.cuda.get_rng_state_all()
-        if torch.cuda.is_available()
-        else None
+    stochastic_result = evaluate_policy_with_preserved_rng(
+        stochastic_env,
+        policy,
+        episodes=episodes,
+        seed=seed,
+        deterministic=False,
+        action_seed=stochastic_action_seed,
     )
-    try:
-        torch.manual_seed(stochastic_action_seed)
-        if torch.cuda.is_available():
-            torch.cuda.manual_seed_all(stochastic_action_seed)
-
-        stochastic_result = evaluate_policy(
-            stochastic_env,
-            policy,
-            episodes=episodes,
-            seed=seed,
-            deterministic=False,
-        )
-    finally:
-        torch.random.set_rng_state(cpu_rng_state)
-        if cuda_rng_states is not None:
-            torch.cuda.set_rng_state_all(cuda_rng_states)
 
     return EvaluationModeComparison(
         deterministic=deterministic_result,
@@ -266,3 +252,37 @@ def evaluate_policy_modes(
         environment_seed=seed,
         stochastic_action_seed=stochastic_action_seed,
     )
+
+
+def evaluate_policy_with_preserved_rng(
+    env,
+    policy: torch.nn.Module,
+    *,
+    episodes: int,
+    seed: int,
+    deterministic: bool,
+    action_seed: int,
+) -> EvaluationResult:
+    """Evaluate without changing the action-sampling RNG used by training."""
+    cpu_rng_state = torch.random.get_rng_state()
+    cuda_rng_states = (
+        torch.cuda.get_rng_state_all()
+        if torch.cuda.is_available()
+        else None
+    )
+    try:
+        torch.manual_seed(action_seed)
+        if torch.cuda.is_available():
+            torch.cuda.manual_seed_all(action_seed)
+
+        return evaluate_policy(
+            env,
+            policy,
+            episodes=episodes,
+            seed=seed,
+            deterministic=deterministic,
+        )
+    finally:
+        torch.random.set_rng_state(cpu_rng_state)
+        if cuda_rng_states is not None:
+            torch.cuda.set_rng_state_all(cuda_rng_states)

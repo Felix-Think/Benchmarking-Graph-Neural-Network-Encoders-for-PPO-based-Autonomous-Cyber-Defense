@@ -6,6 +6,11 @@ from CybORG.Agents import (
 )
 from CybORG.Simulator.Scenarios import EnterpriseScenarioGenerator
 
+from acd_benchmark.cyber.cc4_distribution import (
+    VALID_ENVIRONMENT_DISTRIBUTIONS,
+    RandomPivotEnterpriseScenarioGenerator,
+)
+
 
 BLUE_AGENTS = tuple(f"blue_agent_{index}" for index in range(5))
 
@@ -13,8 +18,19 @@ BLUE_AGENTS = tuple(f"blue_agent_{index}" for index in range(5))
 def make_cc4_env(
     episode_steps: int = 200,
     seed: int | None = None,
+    environment_distribution: str = "official",
 ) -> CybORG:
-    scenario_generator = EnterpriseScenarioGenerator(
+    if environment_distribution not in VALID_ENVIRONMENT_DISTRIBUTIONS:
+        raise ValueError(
+            "environment_distribution must be one of "
+            f"{VALID_ENVIRONMENT_DISTRIBUTIONS}"
+        )
+    generator_class = (
+        EnterpriseScenarioGenerator
+        if environment_distribution == "official"
+        else RandomPivotEnterpriseScenarioGenerator
+    )
+    scenario_generator = generator_class(
         blue_agent_class=SleepAgent,
         green_agent_class=EnterpriseGreenAgent,
         red_agent_class=FiniteStateRedAgent,

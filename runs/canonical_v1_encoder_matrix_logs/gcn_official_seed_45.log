@@ -1,0 +1,21 @@
+Gym has been unmaintained since 2022 and does not support NumPy 2.0 amongst other critical functionality.
+Please upgrade to Gymnasium, the maintained drop-in replacement of Gym, or contact the authors of your software and request that they upgrade.
+Users of this version of Gym should be able to simply replace 'import gym' with 'import gymnasium as gym' in the vast majority of cases.
+See the migration guide at https://gymnasium.farama.org/introduction/migration_guide/ for additional information.
+/Users/felix/Documents/Cybersecurity_Research_Topic/Topic_1/Benchmarking Graph Neural Network Encoders for PPO-based Autonomous Cyber Defense under Partial Observability/Code/Benchmarking Graph Neural Network Encoders for PPO-based Autonomous Cyber Defense under Partial Observability/.venv/lib/python3.10/site-packages/pygame/pkgdata.py:25: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  from pkg_resources import resource_stream, resource_exists
+update= 50 simulator_step= 19950 decisions= 674 return= -830.00 policy_loss= -0.0204 value_loss= 0.0042 entropy= 3.3376 approx_kl= 0.009385
+update= 100 simulator_step= 39900 decisions= 586 return= -1032.00 policy_loss= -0.0190 value_loss= 0.0228 entropy= 3.0920 approx_kl= 0.009624
+update= 150 simulator_step= 59850 decisions= 569 return= -577.00 policy_loss= -0.0192 value_loss= 0.0054 entropy= 3.0606 approx_kl= 0.009819
+update= 200 simulator_step= 79800 decisions= 758 return= -571.00 policy_loss= -0.0150 value_loss= 0.0019 entropy= 2.6635 approx_kl= 0.007328
+update= 250 simulator_step= 99750 decisions= 634 return= -584.00 policy_loss= -0.0200 value_loss= 0.0071 entropy= 3.2334 approx_kl= 0.010804
+training_complete simulator_steps=100149 decisions=170112 updates=251 episodes=251
+deterministic_evaluation mean_return=-4113.70 std_return=948.74
+stochastic_evaluation mean_return=-784.43 std_return=268.87
+paired_return_difference definition=stochastic-deterministic mean=3329.27
+parameters=291735
+checkpoint=runs/canonical_gcn_random_pivot_100k/seed_45/checkpoint.pt
+deterministic_evaluation_file=runs/canonical_gcn_random_pivot_100k/seed_45/evaluation_deterministic.json
+stochastic_evaluation_file=runs/canonical_gcn_random_pivot_100k/seed_45/evaluation_stochastic.json
+evaluation_comparison_file=runs/canonical_gcn_random_pivot_100k/seed_45/evaluation_comparison.json
+tensorboard_log_dir=runs/canonical_gcn_random_pivot_100k/seed_45/tensorboard

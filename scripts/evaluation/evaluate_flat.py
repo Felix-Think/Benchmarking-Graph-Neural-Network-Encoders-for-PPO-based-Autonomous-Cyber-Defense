@@ -1,6 +1,9 @@
 import argparse
 import json
+from collections.abc import Callable
 from pathlib import Path
+
+import torch
 
 from acd_benchmark.cyber.cc4_flat_env import CC4FlatEnv
 from acd_benchmark.rl.policies.flat import FlatActorCritic
@@ -24,35 +27,47 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--stochastic-action-seed", type=int, default=None)
     parser.add_argument("--device", type=str, default="cpu")
     parser.add_argument("--checkpoint-path", type=Path, default=None)
+    parser.add_argument(
+        "--output-prefix",
+        type=str,
+        default="evaluation",
+        help="Prefix for the three evaluation JSON files.",
+    )
     return parser
 
 
-def main(argv: list[str] | None = None) -> None:
-    args = build_parser().parse_args(argv)
+def run_evaluation(
+    args: argparse.Namespace,
+    env_factory: Callable[..., object] = CC4FlatEnv,
+    policy_factory: Callable[[dict], torch.nn.Module] | None = None,
+) -> None:
     run_dir = args.run_dir / f"seed_{args.seed}"
     config = json.loads(
         (run_dir / "config.json").read_text(encoding="utf-8")
     )
     checkpoint_path = args.checkpoint_path or run_dir / "checkpoint.pt"
 
-    policy = FlatActorCritic(
-        observation_dim=int(config["observation_dim"]),
-        num_actions=int(config["num_actions"]),
-        encoder_hidden_dim=int(config["encoder_hidden_dim"]),
-        latent_dim=int(config["latent_dim"]),
-        head_hidden_dim=int(config["head_hidden_dim"]),
-    )
+    if policy_factory is None:
+        policy = FlatActorCritic(
+            observation_dim=int(config["observation_dim"]),
+            num_actions=int(config["num_actions"]),
+            encoder_hidden_dim=int(config["encoder_hidden_dim"]),
+            latent_dim=int(config["latent_dim"]),
+            head_hidden_dim=int(config["head_hidden_dim"]),
+        )
+    else:
+        policy = policy_factory(config)
     load_policy_checkpoint(
         policy,
         checkpoint_path,
         device=args.device,
     )
 
-    deterministic_env = CC4FlatEnv(
+    deterministic_env = env_factory(
         episode_steps=int(config["episode_steps"]),
         seed=args.eval_seed,
     )
-    stochastic_env = CC4FlatEnv(
+    stochastic_env = env_factory(
         episode_steps=int(config["episode_steps"]),
         seed=args.eval_seed,
     )
@@ -66,9 +81,9 @@ def main(argv: list[str] | None = None) -> None:
     )
 
     output_files = {
-        "deterministic": run_dir / "evaluation_deterministic.json",
-        "stochastic": run_dir / "evaluation_stochastic.json",
-        "comparison": run_dir / "evaluation_comparison.json",
+        "deterministic": run_dir / f"{args.output_prefix}_deterministic.json",
+        "stochastic": run_dir / f"{args.output_prefix}_stochastic.json",
+        "comparison": run_dir / f"{args.output_prefix}_comparison.json",
     }
     output_files["deterministic"].write_text(
         json.dumps(comparison.deterministic.to_dict(), indent=2),
@@ -101,6 +116,11 @@ def main(argv: list[str] | None = None) -> None:
     )
     for name, path in output_files.items():
         print(f"{name}_file={path}")
+
+
+def main(argv: list[str] | None = None) -> None:
+    args = build_parser().parse_args(argv)
+    run_evaluation(args)
 
 
 if __name__ == "__main__":

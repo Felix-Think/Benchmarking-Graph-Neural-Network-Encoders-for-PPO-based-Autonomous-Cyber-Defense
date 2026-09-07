@@ -1,0 +1,66 @@
+{
+  "protocol": {
+    "name": "cc4_observation_boundary_audit",
+    "training_seed": 42,
+    "episodes": 5,
+    "eval_seed": 10000,
+    "action_seed": 10000,
+    "checkpoint_path": "runs/structured_nodemlp_random_host_qualification_50k_seed42/nodemlp_full/seed_42/checkpoint.pt",
+    "policy_type": "structured_nodemlp",
+    "canonical_schema": "v2",
+    "environment_distribution": "random_host",
+    "policy_input": "strict raw combined Blue observation",
+    "state_union_definition": "old observed plus current not-yet-observed process/connection queues"
+  },
+  "evaluation": {
+    "mean_return": -602.0,
+    "std_return": 106.5476419260417,
+    "episode_returns": [
+      -578.0,
+      -528.0,
+      -812.0,
+      -559.0,
+      -533.0
+    ]
+  },
+  "counts": {
+    "current_only": 0,
+    "current_positive": 0,
+    "host_ticks": 180139,
+    "old_positive": 1476,
+    "raw_and_union": 1476,
+    "raw_only": 737,
+    "raw_positive": 2213,
+    "state_union_positive": 1476,
+    "union_only": 0
+  },
+  "rates": {
+    "raw_positive_per_host_tick": 0.012284957727088526,
+    "state_union_positive_per_host_tick": 0.008193672663887331,
+    "raw_only_given_raw_positive": 0.33303208314505195,
+    "union_only_given_state_union_positive": 0.0,
+    "current_only_given_state_union_positive": 0.0
+  },
+  "raw_positive_by_last_action_and_target_relation": {
+    "raw_and_state|AllowTrafficZone:non_target": 276,
+    "raw_and_state|Analyse:non_target": 36,
+    "raw_and_state|Analyse:target": 4,
+    "raw_and_state|BlockTrafficZone:non_target": 14,
+    "raw_and_state|DeployDecoy:non_target": 42,
+    "raw_and_state|DeployDecoy:target": 3,
+    "raw_and_state|Monitor:non_target": 3,
+    "raw_and_state|None:non_target": 814,
+    "raw_and_state|Remove:non_target": 131,
+    "raw_and_state|Remove:target": 12,
+    "raw_and_state|Restore:non_target": 99,
+    "raw_and_state|Restore:target": 15,
+    "raw_and_state|Sleep:non_target": 27,
+    "raw_only|DeployDecoy:target": 376,
+    "raw_only|None:non_target": 361
+  },
+  "interpretation_limits": [
+    "State queue comparisons are diagnostics and are never policy inputs.",
+    "Raw-only events may include selected-action feedback such as decoy deployment.",
+    "This audit measures observation-boundary differences, not compromise truth."
+  ]
+}

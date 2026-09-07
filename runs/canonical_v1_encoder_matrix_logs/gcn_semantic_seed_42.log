@@ -1,0 +1,26 @@
+Gym has been unmaintained since 2022 and does not support NumPy 2.0 amongst other critical functionality.
+Please upgrade to Gymnasium, the maintained drop-in replacement of Gym, or contact the authors of your software and request that they upgrade.
+Users of this version of Gym should be able to simply replace 'import gym' with 'import gymnasium as gym' in the vast majority of cases.
+See the migration guide at https://gymnasium.farama.org/introduction/migration_guide/ for additional information.
+/Users/felix/Documents/Cybersecurity_Research_Topic/Topic_1/Benchmarking Graph Neural Network Encoders for PPO-based Autonomous Cyber Defense under Partial Observability/Code/Benchmarking Graph Neural Network Encoders for PPO-based Autonomous Cyber Defense under Partial Observability/.venv/lib/python3.10/site-packages/pygame/pkgdata.py:25: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  from pkg_resources import resource_stream, resource_exists
+update= 25 simulator_step= 9975 decisions= 583 return= -1762.00 policy_loss= -0.0187 value_loss= 0.0521 entropy= 3.5564 approx_kl= 0.008383
+update= 50 simulator_step= 19950 decisions= 589 return= -1870.00 policy_loss= -0.0244 value_loss= 0.0746 entropy= 3.2673 approx_kl= 0.010479
+update= 75 simulator_step= 29925 decisions= 523 return= -621.00 policy_loss= -0.0178 value_loss= 0.0097 entropy= 3.0460 approx_kl= 0.012093
+update= 100 simulator_step= 39900 decisions= 532 return= -703.00 policy_loss= -0.0231 value_loss= 0.0123 entropy= 3.0957 approx_kl= 0.008810
+update= 125 simulator_step= 49875 decisions= 557 return= -565.00 policy_loss= -0.0203 value_loss= 0.0066 entropy= 2.9915 approx_kl= 0.010401
+update= 150 simulator_step= 59850 decisions= 563 return= -1474.00 policy_loss= -0.0268 value_loss= 0.0339 entropy= 3.1163 approx_kl= 0.010025
+update= 175 simulator_step= 69825 decisions= 555 return= -1112.00 policy_loss= -0.0275 value_loss= 0.0478 entropy= 3.3703 approx_kl= 0.007994
+update= 200 simulator_step= 79800 decisions= 549 return= -863.00 policy_loss= -0.0207 value_loss= 0.0115 entropy= 3.0401 approx_kl= 0.008198
+update= 225 simulator_step= 89775 decisions= 558 return= -771.00 policy_loss= -0.0265 value_loss= 0.0106 entropy= 3.0502 approx_kl= 0.010946
+update= 250 simulator_step= 99750 decisions= 526 return= -673.00 policy_loss= -0.0189 value_loss= 0.0101 entropy= 3.0029 approx_kl= 0.009318
+training_complete simulator_steps=100149 decisions=141676 updates=251 episodes=251
+deterministic_evaluation mean_return=-3833.70 std_return=763.78
+stochastic_evaluation mean_return=-683.80 std_return=228.93
+paired_return_difference definition=stochastic-deterministic mean=3149.90
+parameters=291735
+checkpoint=runs/canonical_v1_gcn_random_host_semantic_mask_100k/seed_42/checkpoint.pt
+deterministic_evaluation_file=runs/canonical_v1_gcn_random_host_semantic_mask_100k/seed_42/evaluation_deterministic.json
+stochastic_evaluation_file=runs/canonical_v1_gcn_random_host_semantic_mask_100k/seed_42/evaluation_stochastic.json
+evaluation_comparison_file=runs/canonical_v1_gcn_random_host_semantic_mask_100k/seed_42/evaluation_comparison.json
+tensorboard_log_dir=runs/canonical_v1_gcn_random_host_semantic_mask_100k/seed_42/tensorboard

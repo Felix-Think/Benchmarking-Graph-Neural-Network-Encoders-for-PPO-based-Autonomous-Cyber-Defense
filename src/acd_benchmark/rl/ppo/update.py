@@ -32,6 +32,7 @@ def ppo_update(policy,
         "policy_loss": 0.0,
         "value_loss" : 0.0,
         "entropy": 0.0,
+        "normalized_entropy": 0.0,
         "approx_kl": 0.0,
         "clip_fraction": 0.0,
         "grad_norm": 0.0,
@@ -67,6 +68,13 @@ def ppo_update(policy,
             value_loss = 0.5 * (new_values - returns[minibatch_indices]).pow(2).mean()
 
             entropy_mean = entropy.mean()
+            valid_action_counts = action_masks[minibatch_indices].sum(dim=-1).float()
+            maximum_entropy = valid_action_counts.clamp_min(2.0).log()
+            normalized_entropy = torch.where(
+                valid_action_counts > 1,
+                entropy / maximum_entropy,
+                torch.zeros_like(entropy),
+            ).mean()
 
             total_loss = (policy_loss + value_coef * value_loss - entropy_coef * entropy_mean)
 
@@ -87,6 +95,7 @@ def ppo_update(policy,
                 "policy_loss": policy_loss,
                 "value_loss": value_loss,
                 "entropy": entropy_mean,
+                "normalized_entropy": normalized_entropy,
                 "approx_kl": approx_kl,
                 "clip_fraction": clip_fraction,
                 "grad_norm": grad_norm,
@@ -117,5 +126,8 @@ def ppo_update(policy,
 
     metrics["optimizer_steps"] = optimizer_steps
     metrics["early_stopped"] = early_stopped
+    metrics["valid_action_count_mean"] = float(
+        action_masks.sum(dim=-1).float().mean()
+    )
 
     return metrics

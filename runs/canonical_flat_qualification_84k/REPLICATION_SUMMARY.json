@@ -1,0 +1,123 @@
+{
+  "protocol": {
+    "training_seeds": [
+      42,
+      43,
+      44
+    ],
+    "replication_unit": "training_seed",
+    "episodes_are_not_pooled_across_training_seeds": true,
+    "replicated_rule": "all point estimates positive and at least a majority of seeds pass each paired-bootstrap CI gate",
+    "not_replicated_rule": "a majority of seeds have non-positive point estimates for either gate",
+    "otherwise": "mixed"
+  },
+  "deterministic_held_out_by_seed": [
+    {
+      "seed": 42,
+      "untrained_mean": -3686.11,
+      "static_only_mean": -3542.4,
+      "best_mean": -3183.12,
+      "final_mean": -3637.0
+    },
+    {
+      "seed": 43,
+      "untrained_mean": -3373.13,
+      "static_only_mean": -3393.55,
+      "best_mean": -3393.34,
+      "final_mean": -3754.3
+    },
+    {
+      "seed": 44,
+      "untrained_mean": -3704.22,
+      "static_only_mean": -3402.65,
+      "best_mean": -3122.3,
+      "final_mean": -3273.96
+    }
+  ],
+  "learning_gate": {
+    "per_seed": [
+      {
+        "seed": 42,
+        "mean_delta": 502.99,
+        "bootstrap_ci95": [
+          293.78,
+          715.92
+        ],
+        "point_estimate_positive": true,
+        "ci_gate_pass": true
+      },
+      {
+        "seed": 43,
+        "mean_delta": -20.21,
+        "bootstrap_ci95": [
+          -221.18,
+          186.45
+        ],
+        "point_estimate_positive": false,
+        "ci_gate_pass": false
+      },
+      {
+        "seed": 44,
+        "mean_delta": 581.92,
+        "bootstrap_ci95": [
+          404.68,
+          759.41
+        ],
+        "point_estimate_positive": true,
+        "ci_gate_pass": true
+      }
+    ],
+    "positive_point_estimates": 2,
+    "ci_gate_passes": 2,
+    "mean_seed_delta": 354.9,
+    "median_seed_delta": 502.99,
+    "seed_delta_range": [
+      -20.21,
+      581.92
+    ]
+  },
+  "dynamic_observation_use_gate": {
+    "per_seed": [
+      {
+        "seed": 42,
+        "mean_delta": 359.28,
+        "bootstrap_ci95": [
+          249.84,
+          475.66
+        ],
+        "point_estimate_positive": true,
+        "ci_gate_pass": true
+      },
+      {
+        "seed": 43,
+        "mean_delta": 0.21,
+        "bootstrap_ci95": [
+          -2.9,
+          3.94
+        ],
+        "point_estimate_positive": true,
+        "ci_gate_pass": false
+      },
+      {
+        "seed": 44,
+        "mean_delta": 280.35,
+        "bootstrap_ci95": [
+          150.21,
+          411.06
+        ],
+        "point_estimate_positive": true,
+        "ci_gate_pass": true
+      }
+    ],
+    "positive_point_estimates": 3,
+    "ci_gate_passes": 2,
+    "mean_seed_delta": 213.28,
+    "median_seed_delta": 280.35,
+    "seed_delta_range": [
+      0.21,
+      359.28
+    ]
+  },
+  "decision": "mixed",
+  "claim_boundary": "The action-aware canonical representation is learnable in two of three PPO training seeds, but qualification is not stable enough to claim replicated learning across seeds."
+}

@@ -1,0 +1,173 @@
+{
+  "protocol": {
+    "primary_mode": "stochastic",
+    "independent_unit": "training seed",
+    "training_seeds": [
+      43,
+      44,
+      45,
+      46
+    ],
+    "evaluation_seed_start": 10000,
+    "conditions": [
+      "full",
+      "no_evidence"
+    ],
+    "full_minus_no_evidence_definition": "positive means sensor evidence improved held-out return",
+    "plateau_slope_threshold_per_100k": 50.0
+  },
+  "per_seed": {
+    "43": {
+      "full_mean_return": -1266.5333333333333,
+      "no_evidence_mean_return": -1292.9666666666667,
+      "untrained_full_mean_return": -4803.666666666667,
+      "full_minus_no_evidence": 26.433333333333334,
+      "full_minus_untrained": 3537.133333333333,
+      "full_training_last20_minus_first20": 2546.6190476190477,
+      "full_late_periodic_slope_per_100k": null,
+      "finite_training_metrics": true,
+      "controlled_config_audit": {
+        "passed": true,
+        "expected_difference": {
+          "observation_condition": {
+            "full": "full",
+            "no_evidence": "no_evidence"
+          }
+        },
+        "unexpected_differences": {}
+      }
+    },
+    "44": {
+      "full_mean_return": -1166.5333333333333,
+      "no_evidence_mean_return": -1306.8666666666666,
+      "untrained_full_mean_return": -5187.1,
+      "full_minus_no_evidence": 140.33333333333334,
+      "full_minus_untrained": 4020.5666666666666,
+      "full_training_last20_minus_first20": 3214.9047619047615,
+      "full_late_periodic_slope_per_100k": null,
+      "finite_training_metrics": true,
+      "controlled_config_audit": {
+        "passed": true,
+        "expected_difference": {
+          "observation_condition": {
+            "full": "full",
+            "no_evidence": "no_evidence"
+          }
+        },
+        "unexpected_differences": {}
+      }
+    },
+    "45": {
+      "full_mean_return": -1151.2666666666667,
+      "no_evidence_mean_return": -1161.3,
+      "untrained_full_mean_return": -5236.9,
+      "full_minus_no_evidence": 10.033333333333333,
+      "full_minus_untrained": 4085.633333333333,
+      "full_training_last20_minus_first20": 3114.6190476190473,
+      "full_late_periodic_slope_per_100k": null,
+      "finite_training_metrics": true,
+      "controlled_config_audit": {
+        "passed": true,
+        "expected_difference": {
+          "observation_condition": {
+            "full": "full",
+            "no_evidence": "no_evidence"
+          }
+        },
+        "unexpected_differences": {}
+      }
+    },
+    "46": {
+      "full_mean_return": -1407.9333333333334,
+      "no_evidence_mean_return": -1145.3666666666666,
+      "untrained_full_mean_return": -4812.733333333334,
+      "full_minus_no_evidence": -262.56666666666666,
+      "full_minus_untrained": 3404.8,
+      "full_training_last20_minus_first20": 2726.666666666667,
+      "full_late_periodic_slope_per_100k": null,
+      "finite_training_metrics": true,
+      "controlled_config_audit": {
+        "passed": true,
+        "expected_difference": {
+          "observation_condition": {
+            "full": "full",
+            "no_evidence": "no_evidence"
+          }
+        },
+        "unexpected_differences": {}
+      }
+    }
+  },
+  "multi_seed": {
+    "full_minus_no_evidence": {
+      "n": 4,
+      "mean": -21.441666666666663,
+      "std": 170.87530297461558,
+      "student_t_ci95": [
+        -293.3424049746138,
+        250.4590716412805
+      ],
+      "positive_zero_negative": [
+        3,
+        0,
+        1
+      ],
+      "values": [
+        26.433333333333334,
+        140.33333333333334,
+        10.033333333333333,
+        -262.56666666666666
+      ]
+    },
+    "full_minus_untrained": {
+      "n": 4,
+      "mean": 3762.033333333333,
+      "std": 341.444045630168,
+      "student_t_ci95": [
+        3218.719662594813,
+        4305.347004071853
+      ],
+      "positive_zero_negative": [
+        4,
+        0,
+        0
+      ],
+      "values": [
+        3537.133333333333,
+        4020.5666666666666,
+        4085.633333333333,
+        3404.8
+      ]
+    },
+    "full_training_last20_minus_first20": {
+      "n": 4,
+      "mean": 2900.7023809523807,
+      "std": 316.3051866290453,
+      "student_t_ci95": [
+        2397.3902446874536,
+        3404.014517217308
+      ],
+      "positive_zero_negative": [
+        4,
+        0,
+        0
+      ],
+      "values": [
+        2546.6190476190477,
+        3214.9047619047615,
+        3114.6190476190473,
+        2726.666666666667
+      ]
+    },
+    "full_late_periodic_slope_per_100k": null
+  },
+  "qualification_gates": {
+    "at_least_five_training_seeds": false,
+    "controlled_and_finite": true,
+    "trained_full_beats_untrained": false,
+    "full_training_return_improves": false,
+    "full_beats_trained_no_evidence": false,
+    "late_validation_curve_is_flat": false,
+    "ready_for_encoder_benchmark": false
+  }
+}

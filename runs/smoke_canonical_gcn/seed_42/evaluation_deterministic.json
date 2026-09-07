@@ -1,0 +1,31 @@
+{
+  "mean_return": -266.5,
+  "std_return": 7.5,
+  "min_return": -274.0,
+  "max_return": -259.0,
+  "mean_episode_length": 99.0,
+  "mean_policy_decisions": 156.0,
+  "episode_returns": [
+    -259.0,
+    -274.0
+  ],
+  "episode_lengths": [
+    99,
+    99
+  ],
+  "episode_policy_decisions": [
+    143,
+    169
+  ],
+  "action_counts": {
+    "blue_agent_0: Restore restricted_zone_a_subnet_server_host_2": 20,
+    "blue_agent_1: Remove operational_zone_a_subnet_server_host_3": 66,
+    "blue_agent_2: Restore restricted_zone_b_subnet_server_host_2": 20,
+    "blue_agent_3: Restore operational_zone_b_subnet_server_host_0": 40,
+    "blue_agent_4: DeployDecoy office_network_subnet_server_host_1": 50,
+    "blue_agent_0: Remove restricted_zone_a_subnet_server_host_3": 33,
+    "blue_agent_2: Remove restricted_zone_b_subnet_server_host_3": 33,
+    "blue_agent_4: Analyse office_network_subnet_server_host_4": 50
+  },
+  "deterministic": true
+}

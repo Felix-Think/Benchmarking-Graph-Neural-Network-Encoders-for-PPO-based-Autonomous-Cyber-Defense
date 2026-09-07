@@ -1,0 +1,65 @@
+{
+  "protocol": {
+    "training_seed": 42,
+    "requested_simulator_steps": 30000,
+    "actual_simulator_steps": 30324,
+    "updates": 76,
+    "episode_steps": 400,
+    "held_out_episode_seeds": "10000-10029",
+    "held_out_episodes": 30,
+    "primary_evaluation": "stochastic_final_checkpoint",
+    "observation_dim": 1651,
+    "parameter_count": 292339
+  },
+  "held_out_return": {
+    "trained_stochastic": {
+      "mean": -834.53,
+      "std": 271.06
+    },
+    "untrained_stochastic": {
+      "mean": -3776.13,
+      "std": 624.59
+    },
+    "static_only_stochastic": {
+      "mean": -854.0,
+      "std": 355.09
+    },
+    "trained_deterministic_secondary": {
+      "mean": -3670.57,
+      "std": 873.02
+    }
+  },
+  "paired_comparisons": {
+    "trained_minus_untrained": {
+      "mean_delta": 2941.6,
+      "bootstrap_ci95": [2707.96, 3179.94],
+      "paired_dz": 4.3255,
+      "wins_ties_losses": [30, 0, 0],
+      "paired_t_p": 1.5903709932895957e-20,
+      "wilcoxon_p": 1.862645149230957e-09
+    },
+    "trained_minus_static_only": {
+      "mean_delta": 19.47,
+      "bootstrap_ci95": [-139.23, 170.17],
+      "paired_dz": 0.0445,
+      "wins_ties_losses": [17, 0, 13],
+      "paired_t_p": 0.8091694478076584,
+      "wilcoxon_p": 0.4771064817905426
+    },
+    "static_only_minus_untrained": {
+      "mean_delta": 2922.13,
+      "bootstrap_ci95": [2655.6, 3187.63],
+      "paired_dz": 3.8917,
+      "wins_ties_losses": [30, 0, 0],
+      "paired_t_p": 2.900512469454747e-19,
+      "wilcoxon_p": 1.862645149230957e-09
+    }
+  },
+  "action_type_total_variation_full_vs_static_only": 0.0164,
+  "qualification": {
+    "learning_gate_seed_42": true,
+    "dynamic_observation_use_gate_seed_42": false,
+    "ready_to_freeze_v1_for_encoder_benchmark": false,
+    "paper_level_multi_seed_evidence": false
+  }
+}

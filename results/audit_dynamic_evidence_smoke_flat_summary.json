@@ -1,0 +1,205 @@
+{
+  "policy_type": "flat",
+  "training_seed": 42,
+  "environment_distribution": "random_host",
+  "episodes": 1,
+  "mean_return": -441.0,
+  "std_return": 0.0,
+  "episode_returns": [
+    -441.0
+  ],
+  "ticks": 399,
+  "decisions": 512,
+  "evidence_occurrences": 270,
+  "event_type_counts": {
+    "analysis_result_now": 40,
+    "connection_event_now": 161,
+    "max_file_density_now": 1,
+    "process_event_now": 96
+  },
+  "event_buffer_semantics": {
+    "old_observed_event_items_at_evidence_ticks": 612,
+    "current_unobserved_event_items_at_evidence_ticks": 0,
+    "unobserved_fraction": 0.0
+  },
+  "decision_context": {
+    "current_evidence_present": 82,
+    "current_evidence_present_fraction": 0.16015625,
+    "memory_evidence_present": 494,
+    "memory_evidence_present_fraction": 0.96484375,
+    "host_targeted": 458,
+    "target_current_evidence": 7,
+    "target_current_evidence_given_host_action_and_current_context": 0.09722222222222222,
+    "target_memory_evidence": 148,
+    "target_memory_evidence_given_host_action_and_memory_context": 0.3356009070294785
+  },
+  "action_proportions": {
+    "all": {
+      "AllowTrafficZone": 0.0859375,
+      "Analyse": 0.078125,
+      "BlockTrafficZone": 0.017578125,
+      "DeployDecoy": 0.0625,
+      "Remove": 0.115234375,
+      "Restore": 0.638671875,
+      "Sleep": 0.001953125
+    },
+    "current_evidence_present": {
+      "AllowTrafficZone": 0.08536585365853659,
+      "Analyse": 0.0975609756097561,
+      "BlockTrafficZone": 0.036585365853658534,
+      "DeployDecoy": 0.06097560975609756,
+      "Remove": 0.13414634146341464,
+      "Restore": 0.5853658536585366
+    },
+    "current_evidence_absent": {
+      "AllowTrafficZone": 0.08604651162790698,
+      "Analyse": 0.07441860465116279,
+      "BlockTrafficZone": 0.013953488372093023,
+      "DeployDecoy": 0.06279069767441861,
+      "Remove": 0.11162790697674418,
+      "Restore": 0.6488372093023256,
+      "Sleep": 0.002325581395348837
+    }
+  },
+  "policy_input_sensitivity": {
+    "all": {
+      "count": 512,
+      "mean_total_variation": 0.0789216818316163,
+      "mean_kl_full_static": 0.028962795577001543,
+      "argmax_change_rate": 0.095703125,
+      "mean_absolute_value_change": 0.2371125603094697
+    },
+    "current_evidence_present": {
+      "count": 82,
+      "mean_total_variation": 0.09717806754633784,
+      "mean_kl_full_static": 0.04027929392174062,
+      "argmax_change_rate": 0.13414634146341464,
+      "mean_absolute_value_change": 0.2727542097975568
+    },
+    "current_evidence_absent": {
+      "count": 430,
+      "mean_total_variation": 0.07544023153252986,
+      "mean_kl_full_static": 0.02680476566009781,
+      "argmax_change_rate": 0.08837209302325581,
+      "mean_absolute_value_change": 0.23031578063964844
+    },
+    "memory_evidence_present": {
+      "count": 494,
+      "mean_total_variation": 0.08102740009828105,
+      "mean_kl_full_static": 0.029691834489898362,
+      "argmax_change_rate": 0.0951417004048583,
+      "mean_absolute_value_change": 0.24540300793975953
+    }
+  },
+  "evidence_response": {
+    "first_same_host_action_observed": 201,
+    "first_same_host_action_observed_fraction": 0.7444444444444445,
+    "median_first_same_host_action_latency": 35.0,
+    "same_host_response_within_0_fraction": 0.025925925925925925,
+    "same_host_response_within_1_fraction": 0.040740740740740744,
+    "same_host_response_within_5_fraction": 0.1111111111111111,
+    "same_host_response_within_10_fraction": 0.15925925925925927
+  },
+  "reward_association_not_causal": {
+    "target_current_evidence": {
+      "count": 7,
+      "mean_reward_next_1": -1.4285714285714286,
+      "mean_reward_next_5": -6.142857142857143,
+      "mean_reward_next_10": -10.428571428571429,
+      "mean_blue_reward_machine_next_5": -2.0,
+      "mean_action_cost_next_5": -4.142857142857143
+    },
+    "current_context_but_other_host": {
+      "count": 65,
+      "mean_reward_next_1": -1.7076923076923076,
+      "mean_reward_next_5": -6.138461538461539,
+      "mean_reward_next_10": -11.492307692307692,
+      "mean_blue_reward_machine_next_5": -1.8307692307692307,
+      "mean_action_cost_next_5": -4.3076923076923075
+    },
+    "no_current_or_memory_evidence": {
+      "count": 17,
+      "mean_reward_next_1": -1.6470588235294117,
+      "mean_reward_next_5": -5.411764705882353,
+      "mean_reward_next_10": -9.529411764705882,
+      "mean_blue_reward_machine_next_5": -2.0588235294117645,
+      "mean_action_cost_next_5": -3.3529411764705883
+    },
+    "target_memory_evidence": {
+      "count": 148,
+      "mean_reward_next_1": -1.4864864864864864,
+      "mean_reward_next_5": -6.081081081081081,
+      "mean_reward_next_10": -11.66891891891892,
+      "mean_blue_reward_machine_next_5": -1.8783783783783783,
+      "mean_action_cost_next_5": -4.202702702702703
+    }
+  },
+  "reward_breakdown": {
+    "total": -441.0,
+    "blue_reward_machine": -114.0,
+    "action_cost": -327.0
+  },
+  "action_completion": {
+    "AllowTrafficZone": {
+      "selected": 44,
+      "completed": 44,
+      "success_counts": {
+        "FALSE": 43,
+        "TRUE": 1
+      },
+      "mean_observed_duration": 1.0
+    },
+    "Analyse": {
+      "selected": 40,
+      "completed": 40,
+      "success_counts": {
+        "TRUE": 40
+      },
+      "mean_observed_duration": 2.0
+    },
+    "BlockTrafficZone": {
+      "selected": 9,
+      "completed": 9,
+      "success_counts": {
+        "FALSE": 3,
+        "TRUE": 6
+      },
+      "mean_observed_duration": 1.0
+    },
+    "DeployDecoy": {
+      "selected": 32,
+      "completed": 32,
+      "success_counts": {
+        "TRUE": 32
+      },
+      "mean_observed_duration": 2.0
+    },
+    "Remove": {
+      "selected": 59,
+      "completed": 59,
+      "success_counts": {
+        "TRUE": 59
+      },
+      "mean_observed_duration": 3.0
+    },
+    "Restore": {
+      "selected": 327,
+      "completed": 322,
+      "success_counts": {
+        "TRUE": 322
+      },
+      "mean_observed_duration": 5.0
+    },
+    "Sleep": {
+      "selected": 1,
+      "completed": 1,
+      "success_counts": {
+        "UNKNOWN": 1
+      },
+      "mean_observed_duration": 1.0
+    }
+  },
+  "eval_seed": 10000,
+  "action_seed": 10000,
+  "checkpoint_path": "runs/canonical_flat_random_pivot_100k/seed_42/checkpoint.pt"
+}

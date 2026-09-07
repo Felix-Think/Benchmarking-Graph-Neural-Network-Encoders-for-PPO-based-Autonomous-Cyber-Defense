@@ -22,7 +22,7 @@ dev = [
 ]
 
 [tool.uv.sources]
-cyborg = { path = "CybORG", editable = true }
+cyborg = { path = "CybORG" }
 
 [build-system]
 requires = ["setuptools==82.0.1"]

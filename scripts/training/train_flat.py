@@ -1,5 +1,7 @@
 import argparse
 import json
+import os
+from collections.abc import Callable
 from pathlib import Path
 
 import torch
@@ -7,8 +9,8 @@ import torch
 from acd_benchmark.cyber.cc4_flat_env import CC4FlatEnv
 from acd_benchmark.rl.policies.flat import FlatActorCritic
 from acd_benchmark.rl.ppo.evaluation import (
-    evaluate_policy,
     evaluate_policy_modes,
+    evaluate_policy_with_preserved_rng,
 )
 from acd_benchmark.rl.ppo.training import (
     PPOTrainingConfig,
@@ -35,6 +37,15 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--gamma", type=float, default=0.99)
     parser.add_argument("--gae-lambda", type=float, default=0.95)
     parser.add_argument("--update-epochs", type=int, default=4)
+    parser.add_argument(
+        "--episodes-per-update",
+        type=int,
+        default=1,
+        help=(
+            "Number of complete episodes collected sequentially before each "
+            "PPO update."
+        ),
+    )
     parser.add_argument("--minibatch-size", type=int, default=64)
     parser.add_argument("--reward-scale",type=float,default=0.01,help="Fixed multiplier for PPO rewards before GAE.",)
     parser.add_argument("--clip-coef", type=float, default=0.2)
@@ -67,6 +78,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--periodic-eval-episodes", type=int, default=10)
     parser.add_argument("--periodic-eval-seed", type=int, default=20_000)
+    parser.add_argument(
+        "--periodic-eval-mode",
+        choices=("deterministic", "stochastic"),
+        default="deterministic",
+    )
     parser.add_argument("--run-dir", type=Path, default=Path("runs/flat"))
     parser.add_argument("--checkpoint-path", type=Path, default=None)
     parser.add_argument("--best-checkpoint-path", type=Path, default=None)
@@ -101,13 +117,18 @@ def _print_update(metrics: dict, every_updates: int) -> None:
     )
 
 
-def main(argv: list[str] | None = None) -> None:
-    args = build_parser().parse_args(argv)
-
+def run_training(
+    args: argparse.Namespace,
+    env_factory: Callable[..., object] = CC4FlatEnv,
+    policy_factory: Callable[[int, int, argparse.Namespace], torch.nn.Module]
+    | None = None,
+) -> None:
     if args.eval_every_updates < 0:
         raise ValueError("--eval-every-updates must be non-negative.")
     if args.reward_scale <= 0:
         raise ValueError("--reward-scale must be positive.")
+    if args.episodes_per_update <= 0:
+        raise ValueError("--episodes-per-update must be positive.")
 
     run_dir = args.run_dir / f"seed_{args.seed}"
     run_dir.mkdir(parents=True, exist_ok=True)
@@ -121,6 +142,7 @@ def main(argv: list[str] | None = None) -> None:
 
     config = PPOTrainingConfig(
         total_simulator_steps=args.total_simulator_steps,
+        episodes_per_update=args.episodes_per_update,
         learning_rate=args.learning_rate,
         gamma=args.gamma,
         gae_lambda=args.gae_lambda,
@@ -138,7 +160,7 @@ def main(argv: list[str] | None = None) -> None:
     )
 
     seed_runtime(config.seed)
-    train_env = CC4FlatEnv(
+    train_env = env_factory(
         episode_steps=args.episode_steps,
         seed=args.seed,
     )
@@ -146,13 +168,16 @@ def main(argv: list[str] | None = None) -> None:
     observation_dim = int(train_env.observation_space(reference_agent).shape[0])
     num_actions = int(train_env.action_space(reference_agent).n)
 
-    policy = FlatActorCritic(
-        observation_dim=observation_dim,
-        num_actions=num_actions,
-        encoder_hidden_dim=args.encoder_hidden_dim,
-        latent_dim=args.latent_dim,
-        head_hidden_dim=args.head_hidden_dim,
-    )
+    if policy_factory is None:
+        policy = FlatActorCritic(
+            observation_dim=observation_dim,
+            num_actions=num_actions,
+            encoder_hidden_dim=args.encoder_hidden_dim,
+            latent_dim=args.latent_dim,
+            head_hidden_dim=args.head_hidden_dim,
+        )
+    else:
+        policy = policy_factory(observation_dim, num_actions, args)
     policy.to(torch.device(config.device))
     optimizer = torch.optim.Adam(
         policy.parameters(),
@@ -167,12 +192,18 @@ def main(argv: list[str] | None = None) -> None:
         "checkpoint_path": str(checkpoint_path),
         "best_checkpoint_path": str(best_checkpoint_path),
         "best_checkpoint_selection_metric": (
-            "periodic_deterministic_mean_return"
+            f"periodic_{args.periodic_eval_mode}_mean_return"
         ),
         "tensorboard_log_dir": str(tensorboard_log_dir),
         "observation_dim": observation_dim,
         "num_actions": num_actions,
         "parameter_count": parameter_count,
+        "policy_type": getattr(args, "policy_type", "flat"),
+        "runtime_seed_controls": {
+            "python_hash_seed": os.environ.get("PYTHONHASHSEED"),
+            "omp_num_threads": os.environ.get("OMP_NUM_THREADS"),
+            "mkl_num_threads": os.environ.get("MKL_NUM_THREADS"),
+        },
     }
     (run_dir / "config.json").write_text(
         json.dumps(run_config, indent=2, sort_keys=True),
@@ -180,7 +211,7 @@ def main(argv: list[str] | None = None) -> None:
     )
 
     periodic_eval_env = (
-        CC4FlatEnv(
+        env_factory(
             episode_steps=args.episode_steps,
             seed=args.periodic_eval_seed,
         )
@@ -213,12 +244,13 @@ def main(argv: list[str] | None = None) -> None:
         ):
             return
 
-        periodic_result = evaluate_policy(
+        periodic_result = evaluate_policy_with_preserved_rng(
             periodic_eval_env,
             policy,
             episodes=args.periodic_eval_episodes,
             seed=args.periodic_eval_seed,
-            deterministic=True,
+            deterministic=args.periodic_eval_mode == "deterministic",
+            action_seed=args.periodic_eval_seed,
         )
         is_best = (
             best_mean_return is None
@@ -251,7 +283,9 @@ def main(argv: list[str] | None = None) -> None:
                 global_step=int(metrics["global_step"]),
                 training_metrics=metrics,
                 evaluation=periodic_record,
-                metric_name="periodic_deterministic_mean_return",
+                metric_name=(
+                    f"periodic_{args.periodic_eval_mode}_mean_return"
+                ),
                 metric_value=periodic_result.mean_return,
             )
 
@@ -262,7 +296,8 @@ def main(argv: list[str] | None = None) -> None:
                 namespace="evaluation",
             )
         print(
-            f"periodic_evaluation update={update} "
+            f"periodic_evaluation mode={args.periodic_eval_mode} "
+            f"update={update} "
             f"mean_return={periodic_result.mean_return:.2f} "
             f"std_return={periodic_result.std_return:.2f} "
             f"is_best={is_best}"
@@ -277,11 +312,11 @@ def main(argv: list[str] | None = None) -> None:
             on_update=on_update,
         )
 
-        deterministic_eval_env = CC4FlatEnv(
+        deterministic_eval_env = env_factory(
             episode_steps=args.episode_steps,
             seed=args.eval_seed,
         )
-        stochastic_eval_env = CC4FlatEnv(
+        stochastic_eval_env = env_factory(
             episode_steps=args.episode_steps,
             seed=args.eval_seed,
         )
@@ -387,6 +422,11 @@ def main(argv: list[str] | None = None) -> None:
     finally:
         if tensorboard_logger is not None:
             tensorboard_logger.close()
+
+
+def main(argv: list[str] | None = None) -> None:
+    args = build_parser().parse_args(argv)
+    run_training(args)
 
 
 if __name__ == "__main__":

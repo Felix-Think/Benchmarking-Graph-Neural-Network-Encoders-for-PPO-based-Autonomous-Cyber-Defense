@@ -21,6 +21,19 @@ from CybORG.Simulator.State import State
 from CybORG.Simulator.Scenarios import EnterpriseScenarioGenerator 
 
 
+def _find_observed_session(observations, host_ip, agent, session_id):
+    """Find a session record without assuming every host observation has one."""
+    for observation in observations:
+        host_observation = observation.data.get(host_ip, {})
+        for observed_session in host_observation.get('Sessions', []):
+            if (
+                observed_session['agent'] == agent
+                and observed_session['session_id'] == session_id
+            ):
+                return observation, observed_session
+    return None, None
+
+
 
 class SimulationController(CybORGLogger):
     """The class that controls the Simulation environment.
@@ -869,28 +882,29 @@ class SimulationController(CybORGLogger):
                 reassignment['new_session_id'] = new_session.ident
 
                 # Edit + Add Observation
-                new_obs = None
-                for i, obs in enumerate(self.observation[reassignment['orig_agent']].observations):
-                    if reassignment['host_ip'] in obs.data.keys():
-                        for obs_sess in obs.data[reassignment['host_ip']]['Sessions']:
-                            if obs_sess['agent'] == reassignment['orig_agent'] and obs_sess['session_id'] == reassignment['orig_session_id']:
-                                # Edit the current agent's observation
-                                obs_sess['agent'] = reassignment['new_agent']
-                                obs_sess['session_id'] = reassignment['new_session_id']
-                                obs_sess['Type'] = Enums.SessionType.RED_ABSTRACT_SESSION
+                obs, obs_sess = _find_observed_session(
+                    self.observation[reassignment['orig_agent']].observations,
+                    reassignment['host_ip'],
+                    reassignment['orig_agent'],
+                    reassignment['orig_session_id'],
+                )
+                if obs_sess is not None:
+                    # Edit the current agent's observation
+                    obs_sess['agent'] = reassignment['new_agent']
+                    obs_sess['session_id'] = reassignment['new_session_id']
+                    obs_sess['Type'] = Enums.SessionType.RED_ABSTRACT_SESSION
 
-                                # Add this as a new observation to the new agent
-                                new_obs = obs.copy()
-                                remove_keys = [k for k in new_obs.data.keys() if not k == reassignment['host_ip'] and not k == 'action' and not k == 'success']
-                                for key in remove_keys:
-                                    new_obs.data.pop(key)
+                    # Add this as a new observation to the new agent
+                    new_obs = obs.copy()
+                    remove_keys = [k for k in new_obs.data.keys() if not k == reassignment['host_ip'] and not k == 'action' and not k == 'success']
+                    for key in remove_keys:
+                        new_obs.data.pop(key)
 
-                                new_obs.raw = reassignment['orig_agent'] + "'s action created a new session."
-                                new_obs.data.pop('action')
-                                new_obs.data['success'] = TernaryEnum.UNKNOWN
+                    new_obs.raw = reassignment['orig_agent'] + "'s action created a new session."
+                    new_obs.data.pop('action')
+                    new_obs.data['success'] = TernaryEnum.UNKNOWN
 
-                                self.observation[reassignment['new_agent']].observations.append(new_obs)
-                        break
+                    self.observation[reassignment['new_agent']].observations.append(new_obs)
 
         # if agent is not active but has sessions then activate
         for agent_name, agent_int in self.agent_interfaces.items():

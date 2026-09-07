@@ -1,0 +1,167 @@
+{
+  "seed": 123,
+  "episode_steps": 20,
+  "passive_memory_ttl_simulator_ticks": 20,
+  "analysis_memory_ttl_simulator_ticks": 20,
+  "conditions": {
+    "v1_mask_off": {
+      "canonical_schema": "v1",
+      "semantic_action_mask": false,
+      "observation_dim": 1651,
+      "node_feature_count": 17,
+      "mask_summary": {
+        "blue_agent_0": {
+          "action_count": 242,
+          "valid_action_count": 58,
+          "valid_allow_count": 8,
+          "valid_block_count": 8
+        },
+        "blue_agent_1": {
+          "action_count": 242,
+          "valid_action_count": 46,
+          "valid_allow_count": 8,
+          "valid_block_count": 8
+        },
+        "blue_agent_2": {
+          "action_count": 242,
+          "valid_action_count": 70,
+          "valid_allow_count": 8,
+          "valid_block_count": 8
+        },
+        "blue_agent_3": {
+          "action_count": 242,
+          "valid_action_count": 42,
+          "valid_allow_count": 8,
+          "valid_block_count": 8
+        },
+        "blue_agent_4": {
+          "action_count": 242,
+          "valid_action_count": 150,
+          "valid_allow_count": 24,
+          "valid_block_count": 24
+        }
+      }
+    },
+    "v2_mask_off": {
+      "canonical_schema": "v2",
+      "semantic_action_mask": false,
+      "observation_dim": 2335,
+      "node_feature_count": 29,
+      "mask_summary": {
+        "blue_agent_0": {
+          "action_count": 242,
+          "valid_action_count": 58,
+          "valid_allow_count": 8,
+          "valid_block_count": 8
+        },
+        "blue_agent_1": {
+          "action_count": 242,
+          "valid_action_count": 46,
+          "valid_allow_count": 8,
+          "valid_block_count": 8
+        },
+        "blue_agent_2": {
+          "action_count": 242,
+          "valid_action_count": 70,
+          "valid_allow_count": 8,
+          "valid_block_count": 8
+        },
+        "blue_agent_3": {
+          "action_count": 242,
+          "valid_action_count": 42,
+          "valid_allow_count": 8,
+          "valid_block_count": 8
+        },
+        "blue_agent_4": {
+          "action_count": 242,
+          "valid_action_count": 150,
+          "valid_allow_count": 24,
+          "valid_block_count": 24
+        }
+      }
+    },
+    "v1_mask_on": {
+      "canonical_schema": "v1",
+      "semantic_action_mask": true,
+      "observation_dim": 1651,
+      "node_feature_count": 17,
+      "mask_summary": {
+        "blue_agent_0": {
+          "action_count": 242,
+          "valid_action_count": 50,
+          "valid_allow_count": 0,
+          "valid_block_count": 8
+        },
+        "blue_agent_1": {
+          "action_count": 242,
+          "valid_action_count": 38,
+          "valid_allow_count": 0,
+          "valid_block_count": 8
+        },
+        "blue_agent_2": {
+          "action_count": 242,
+          "valid_action_count": 62,
+          "valid_allow_count": 0,
+          "valid_block_count": 8
+        },
+        "blue_agent_3": {
+          "action_count": 242,
+          "valid_action_count": 34,
+          "valid_allow_count": 0,
+          "valid_block_count": 8
+        },
+        "blue_agent_4": {
+          "action_count": 242,
+          "valid_action_count": 126,
+          "valid_allow_count": 0,
+          "valid_block_count": 24
+        }
+      }
+    },
+    "v2_mask_on": {
+      "canonical_schema": "v2",
+      "semantic_action_mask": true,
+      "observation_dim": 2335,
+      "node_feature_count": 29,
+      "mask_summary": {
+        "blue_agent_0": {
+          "action_count": 242,
+          "valid_action_count": 50,
+          "valid_allow_count": 0,
+          "valid_block_count": 8
+        },
+        "blue_agent_1": {
+          "action_count": 242,
+          "valid_action_count": 38,
+          "valid_allow_count": 0,
+          "valid_block_count": 8
+        },
+        "blue_agent_2": {
+          "action_count": 242,
+          "valid_action_count": 62,
+          "valid_allow_count": 0,
+          "valid_block_count": 8
+        },
+        "blue_agent_3": {
+          "action_count": 242,
+          "valid_action_count": 34,
+          "valid_allow_count": 0,
+          "valid_block_count": 8
+        },
+        "blue_agent_4": {
+          "action_count": 242,
+          "valid_action_count": 126,
+          "valid_allow_count": 0,
+          "valid_block_count": 24
+        }
+      }
+    }
+  },
+  "independence_checks": {
+    "v1_observation_unchanged_by_mask": true,
+    "v2_observation_unchanged_by_mask": true,
+    "mask_off_unchanged_by_schema": true,
+    "mask_on_unchanged_by_schema": true,
+    "semantic_mask_is_strict_initial_subset": true
+  }
+}

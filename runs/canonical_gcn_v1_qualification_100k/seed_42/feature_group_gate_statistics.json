@@ -1,0 +1,491 @@
+{
+  "action_type_proportions": {
+    "full": {
+      "AllowTrafficZone": 0.17551152621065702,
+      "Analyse": 0.14803217621335638,
+      "BlockTrafficZone": 0.02170274793499973,
+      "DeployDecoy": 0.050639745181666036,
+      "Monitor": 0.0011337256383955083,
+      "Remove": 0.12076877395670248,
+      "Restore": 0.4511148302110889,
+      "Sleep": 0.03109647465313394
+    },
+    "full_no_action_mask": {
+      "AllowTrafficZone": 0.03292974661914758,
+      "Analyse": 0.04630669335546551,
+      "BlockTrafficZone": 0.005663232924864522,
+      "DeployDecoy": 0.019186642581653077,
+      "Monitor": 0.00031733632768637406,
+      "Remove": 0.028902016306205147,
+      "Restore": 0.08504613581994824,
+      "Sleep": 0.005248254650197725,
+      "[Invalid]": 0.13105990333447248,
+      "[Padding]": 0.6453400380803593
+    },
+    "mission_only": {
+      "AllowTrafficZone": 0.1573775838871448,
+      "Analyse": 0.15778529783503895,
+      "BlockTrafficZone": 0.12516818200350635,
+      "DeployDecoy": 0.15839686875688017,
+      "Monitor": 0.014840787703347331,
+      "Remove": 0.1703836588249684,
+      "Restore": 0.19761895054429812,
+      "Sleep": 0.018428670444815918
+    },
+    "node_identity_only": {
+      "AllowTrafficZone": 0.1876292820745674,
+      "Analyse": 0.09257857827556631,
+      "BlockTrafficZone": 0.045658644871600824,
+      "DeployDecoy": 0.08082336915392765,
+      "Monitor": 0.007517279652893396,
+      "Remove": 0.18102013016497653,
+      "Restore": 0.3739468240754755,
+      "Sleep": 0.030825891730992382
+    },
+    "static_only": {
+      "AllowTrafficZone": 0.18633030535186604,
+      "Analyse": 0.0797307650213418,
+      "BlockTrafficZone": 0.0345299332384809,
+      "DeployDecoy": 0.057020904016635655,
+      "Monitor": 0.002736127831892306,
+      "Remove": 0.13669694648133962,
+      "Restore": 0.4695742585093576,
+      "Sleep": 0.033380759549086134
+    },
+    "structure_only": {
+      "AllowTrafficZone": 0.15208662854361846,
+      "Analyse": 0.15821065011964147,
+      "BlockTrafficZone": 0.13038893620472888,
+      "DeployDecoy": 0.16129293912479215,
+      "Monitor": 0.015086993551526949,
+      "Remove": 0.17252707141988077,
+      "Restore": 0.1925213935190818,
+      "Sleep": 0.01788538751672953
+    },
+    "topology_mission": {
+      "AllowTrafficZone": 0.18679919698379277,
+      "Analyse": 0.10649757626205748,
+      "BlockTrafficZone": 0.05253880428928169,
+      "DeployDecoy": 0.08789110316799686,
+      "Monitor": 0.008079126475052637,
+      "Remove": 0.18508544288302403,
+      "Restore": 0.3443176810458796,
+      "Sleep": 0.02879106889291485
+    },
+    "topology_no_adjacency": {
+      "AllowTrafficZone": 0.1900964756841898,
+      "Analyse": 0.0994290214609175,
+      "BlockTrafficZone": 0.05094506792675724,
+      "DeployDecoy": 0.08874778499704666,
+      "Monitor": 0.007137231738531207,
+      "Remove": 0.1838452451269935,
+      "Restore": 0.3509056900964757,
+      "Sleep": 0.028893482969088405
+    },
+    "topology_only": {
+      "AllowTrafficZone": 0.18925245038279612,
+      "Analyse": 0.10713414931486809,
+      "BlockTrafficZone": 0.05237236065733652,
+      "DeployDecoy": 0.08923782123177451,
+      "Monitor": 0.008094796898619984,
+      "Remove": 0.18379090066806456,
+      "Restore": 0.3413468571707222,
+      "Sleep": 0.028770663675818015
+    },
+    "zero_all": {
+      "AllowTrafficZone": 0.15148202137998057,
+      "Analyse": 0.16002591512795594,
+      "BlockTrafficZone": 0.1307904114026563,
+      "DeployDecoy": 0.1624959507612569,
+      "Monitor": 0.015063168124392614,
+      "Remove": 0.17087787495950763,
+      "Restore": 0.1917719468739877,
+      "Sleep": 0.01749271137026239
+    },
+    "zero_all_no_action_mask": {
+      "AllowTrafficZone": 0.04291548253050892,
+      "Analyse": 0.048360518711341435,
+      "BlockTrafficZone": 0.03682563943352518,
+      "DeployDecoy": 0.04976954123182003,
+      "Monitor": 0.004418121462517612,
+      "Remove": 0.051608435029732766,
+      "Restore": 0.057483342487999425,
+      "Sleep": 0.004465884937788074,
+      "[Invalid]": 0.13048981443889857,
+      "[Padding]": 0.573663219735868
+    }
+  },
+  "action_type_total_variation_from_full": {
+    "full": 0.0,
+    "full_no_action_mask": 0.7764,
+    "mission_only": 0.2843,
+    "node_identity_only": 0.1329,
+    "static_only": 0.0683,
+    "structure_only": 0.2952,
+    "topology_mission": 0.1506,
+    "topology_no_adjacency": 0.151,
+    "topology_only": 0.153,
+    "zero_all": 0.297,
+    "zero_all_no_action_mask": 0.7226
+  },
+  "full_comparisons": {
+    "full_minus_full_no_action_mask": {
+      "bootstrap_ci95": [
+        412.4,
+        795.07
+      ],
+      "mean_delta": 602.33,
+      "paired_dz": 1.1068,
+      "paired_t_p": 1.3432494424096132e-06,
+      "wilcoxon_p": 2.348795533180237e-06,
+      "wins_ties_losses": [
+        26,
+        0,
+        4
+      ]
+    },
+    "full_minus_mission_only": {
+      "bootstrap_ci95": [
+        2387.1,
+        2844.3
+      ],
+      "mean_delta": 2610.4,
+      "paired_dz": 3.9989,
+      "paired_t_p": 1.3788034410793677e-19,
+      "wilcoxon_p": 1.862645149230957e-09,
+      "wins_ties_losses": [
+        30,
+        0,
+        0
+      ]
+    },
+    "full_minus_node_identity_only": {
+      "bootstrap_ci95": [
+        41.96,
+        441.7
+      ],
+      "mean_delta": 243.27,
+      "paired_dz": 0.4265,
+      "paired_t_p": 0.02662351596722153,
+      "wilcoxon_p": 0.03098480962216854,
+      "wins_ties_losses": [
+        19,
+        0,
+        11
+      ]
+    },
+    "full_minus_static_only": {
+      "bootstrap_ci95": [
+        -128.47,
+        125.24
+      ],
+      "mean_delta": -2.7,
+      "paired_dz": -0.0074,
+      "paired_t_p": 0.9677627508477049,
+      "wilcoxon_p": 0.9192965272814035,
+      "wins_ties_losses": [
+        17,
+        0,
+        13
+      ]
+    },
+    "full_minus_structure_only": {
+      "bootstrap_ci95": [
+        2414.0,
+        2882.27
+      ],
+      "mean_delta": 2648.4,
+      "paired_dz": 3.9683,
+      "paired_t_p": 1.7023175171456286e-19,
+      "wilcoxon_p": 1.862645149230957e-09,
+      "wins_ties_losses": [
+        30,
+        0,
+        0
+      ]
+    },
+    "full_minus_topology_mission": {
+      "bootstrap_ci95": [
+        179.4,
+        587.77
+      ],
+      "mean_delta": 388.07,
+      "paired_dz": 0.6697,
+      "paired_t_p": 0.0009767931944313156,
+      "wilcoxon_p": 0.0018640067428350449,
+      "wins_ties_losses": [
+        25,
+        0,
+        5
+      ]
+    },
+    "full_minus_topology_no_adjacency": {
+      "bootstrap_ci95": [
+        320.93,
+        778.13
+      ],
+      "mean_delta": 540.8,
+      "paired_dz": 0.8461,
+      "paired_t_p": 7.004468450154435e-05,
+      "wilcoxon_p": 4.4075772166252136e-05,
+      "wins_ties_losses": [
+        23,
+        0,
+        7
+      ]
+    },
+    "full_minus_topology_only": {
+      "bootstrap_ci95": [
+        217.66,
+        560.7
+      ],
+      "mean_delta": 388.8,
+      "paired_dz": 0.7973,
+      "paired_t_p": 0.0001465482025921786,
+      "wilcoxon_p": 0.00020912662148475647,
+      "wins_ties_losses": [
+        23,
+        0,
+        7
+      ]
+    },
+    "full_minus_zero_all": {
+      "bootstrap_ci95": [
+        2529.07,
+        3081.43
+      ],
+      "mean_delta": 2807.07,
+      "paired_dz": 3.5559,
+      "paired_t_p": 3.3639960230404627e-18,
+      "wilcoxon_p": 1.862645149230957e-09,
+      "wins_ties_losses": [
+        30,
+        0,
+        0
+      ]
+    },
+    "full_minus_zero_all_no_action_mask": {
+      "bootstrap_ci95": [
+        2782.6,
+        3304.94
+      ],
+      "mean_delta": 3047.67,
+      "paired_dz": 4.1321,
+      "paired_t_p": 5.610119530157551e-20,
+      "wilcoxon_p": 1.862645149230957e-09,
+      "wins_ties_losses": [
+        30,
+        0,
+        0
+      ]
+    }
+  },
+  "incremental_comparisons": {
+    "action_mask_given_full_observation": {
+      "bootstrap_ci95": [
+        412.23,
+        795.93
+      ],
+      "mean_delta": 602.33,
+      "paired_dz": 1.1068,
+      "paired_t_p": 1.3432494424096132e-06,
+      "wilcoxon_p": 2.348795533180237e-06,
+      "wins_ties_losses": [
+        26,
+        0,
+        4
+      ]
+    },
+    "action_mask_given_zero_observation": {
+      "bootstrap_ci95": [
+        -73.87,
+        567.0
+      ],
+      "mean_delta": 240.6,
+      "paired_dz": 0.2661,
+      "paired_t_p": 0.15579073494652354,
+      "wilcoxon_p": 0.23665234446525574,
+      "wins_ties_losses": [
+        17,
+        0,
+        13
+      ]
+    },
+    "adjacency_given_identity_and_membership": {
+      "bootstrap_ci95": [
+        -73.23,
+        382.33
+      ],
+      "mean_delta": 152.0,
+      "paired_dz": 0.2362,
+      "paired_t_p": 0.20593548386299226,
+      "wilcoxon_p": 0.23665234446525574,
+      "wins_ties_losses": [
+        18,
+        0,
+        12
+      ]
+    },
+    "dynamic_features_given_static_context": {
+      "bootstrap_ci95": [
+        -130.47,
+        127.17
+      ],
+      "mean_delta": -2.7,
+      "paired_dz": -0.0074,
+      "paired_t_p": 0.9677627508477049,
+      "wilcoxon_p": 0.9192965272814035,
+      "wins_ties_losses": [
+        17,
+        0,
+        13
+      ]
+    },
+    "mission_given_topology_static": {
+      "bootstrap_ci95": [
+        -209.47,
+        210.6
+      ],
+      "mean_delta": 0.73,
+      "paired_dz": 0.0012,
+      "paired_t_p": 0.9946932812468072,
+      "wilcoxon_p": 0.9676735773682594,
+      "wins_ties_losses": [
+        13,
+        0,
+        17
+      ]
+    },
+    "mission_given_zero_observation": {
+      "bootstrap_ci95": [
+        -70.53,
+        474.2
+      ],
+      "mean_delta": 196.67,
+      "paired_dz": 0.2512,
+      "paired_t_p": 0.17942513724473988,
+      "wilcoxon_p": 0.2710056286305189,
+      "wins_ties_losses": [
+        17,
+        0,
+        13
+      ]
+    },
+    "node_identity_given_zero_observation": {
+      "bootstrap_ci95": [
+        2204.06,
+        2943.13
+      ],
+      "mean_delta": 2563.8,
+      "paired_dz": 2.4472,
+      "paired_t_p": 5.890186182610878e-14,
+      "wilcoxon_p": 1.862645149230957e-09,
+      "wins_ties_losses": [
+        30,
+        0,
+        0
+      ]
+    },
+    "policy_firewall_globals_given_topology_mission": {
+      "bootstrap_ci95": [
+        190.63,
+        590.67
+      ],
+      "mean_delta": 390.77,
+      "paired_dz": 0.6868,
+      "paired_t_p": 0.0007605306193645719,
+      "wilcoxon_p": 0.0008718203753232956,
+      "wins_ties_losses": [
+        23,
+        0,
+        7
+      ]
+    },
+    "structure_given_zero_observation": {
+      "bootstrap_ci95": [
+        -68.27,
+        391.6
+      ],
+      "mean_delta": 158.67,
+      "paired_dz": 0.2436,
+      "paired_t_p": 0.1925752990992358,
+      "wilcoxon_p": 0.19092952087521553,
+      "wins_ties_losses": [
+        17,
+        0,
+        13
+      ]
+    },
+    "topology_static_given_zero_observation": {
+      "bootstrap_ci95": [
+        2151.66,
+        2697.0
+      ],
+      "mean_delta": 2418.27,
+      "paired_dz": 3.1485,
+      "paired_t_p": 8.737565780477029e-17,
+      "wilcoxon_p": 1.862645149230957e-09,
+      "wins_ties_losses": [
+        30,
+        0,
+        0
+      ]
+    }
+  },
+  "protocol": {
+    "bootstrap_resamples": 20000,
+    "checkpoint": "checkpoint.pt",
+    "evaluation_mode": "stochastic",
+    "paired_episode_count": 30,
+    "policy_type": "gcn",
+    "shared_action_sampling_seed": 10000,
+    "shared_environment_seed_start": 10000,
+    "training_simulator_steps": 100000
+  },
+  "returns": {
+    "full": {
+      "mean": -867.6,
+      "std": 317.07
+    },
+    "full_no_action_mask": {
+      "mean": -1469.93,
+      "std": 509.58
+    },
+    "mission_only": {
+      "mean": -3478.0,
+      "std": 606.96
+    },
+    "node_identity_only": {
+      "mean": -1110.87,
+      "std": 414.51
+    },
+    "static_only": {
+      "mean": -864.9,
+      "std": 302.96
+    },
+    "structure_only": {
+      "mean": -3516.0,
+      "std": 627.55
+    },
+    "topology_mission": {
+      "mean": -1255.67,
+      "std": 420.31
+    },
+    "topology_no_adjacency": {
+      "mean": -1408.4,
+      "std": 519.87
+    },
+    "topology_only": {
+      "mean": -1256.4,
+      "std": 407.77
+    },
+    "zero_all": {
+      "mean": -3674.67,
+      "std": 744.18
+    },
+    "zero_all_no_action_mask": {
+      "mean": -3915.27,
+      "std": 782.62
+    }
+  }
+}

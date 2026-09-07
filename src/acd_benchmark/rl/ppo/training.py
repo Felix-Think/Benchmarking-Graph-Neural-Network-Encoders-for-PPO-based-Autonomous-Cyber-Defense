@@ -7,7 +7,7 @@ import numpy as np
 import torch
 
 from acd_benchmark.rl.ppo.update import ppo_update
-from acd_benchmark.rl.rollout.rollout import collect_rollout
+from acd_benchmark.rl.rollout.rollout import collect_rollout, concatenate_batches
 
 
 MetricValue = float | int | bool | None
@@ -17,6 +17,7 @@ UpdateCallback = Callable[[dict[str, MetricValue]], None]
 @dataclass(frozen=True)
 class PPOTrainingConfig:
     total_simulator_steps: int = 100_000
+    episodes_per_update: int = 1
     learning_rate: float = 3e-4
     gamma: float = 0.99
     gae_lambda: float = 0.95
@@ -132,14 +133,15 @@ def train_policy(
     optimizer: torch.optim.Optimizer | None = None,
     on_update: UpdateCallback | None = None,
 ) -> TrainingResult:
-    """Train one shared policy using one complete CAGE 4 episode per update.
+    """Train one shared policy using complete CAGE 4 episodes.
 
-    The training budget is measured in simulator ticks. A PPO batch contains
-    decision transitions, whose count differs because CAGE 4 actions may span
-    multiple simulator ticks. The final update may exceed the requested budget
-    by at most one episode because rollouts are never cut mid-episode.
+    Each PPO update combines ``episodes_per_update`` sequential trajectories.
+    The budget is measured in simulator ticks and rollouts are never cut in the
+    middle of an episode. The final update can therefore exceed the requested
+    budget by at most one episode.
     """
     assert config.total_simulator_steps > 0
+    assert config.episodes_per_update > 0
     assert config.minibatch_size > 0
     assert config.update_epochs > 0
     assert config.reward_scale > 0
@@ -162,17 +164,38 @@ def train_policy(
     update_index = 0
 
     while global_simulator_steps < config.total_simulator_steps:
-        batch, team_return, simulator_steps = collect_rollout(
-            env=env,
-            policy=policy,
-            seed=config.seed + episode_index,
-            gamma=config.gamma,
-            gae_lambda=config.gae_lambda,
-            reward_scale=config.reward_scale,
-        )
+        rollout_batches = []
+        update_returns = []
+        update_lengths = []
+        update_simulator_steps = 0
 
-        if simulator_steps <= 0:
-            raise RuntimeError("A rollout must contain at least one simulator tick.")
+        for local_episode_index in range(config.episodes_per_update):
+            if (
+                rollout_batches
+                and global_simulator_steps + update_simulator_steps
+                >= config.total_simulator_steps
+            ):
+                break
+
+            batch, team_return, simulator_steps = collect_rollout(
+                env=env,
+                policy=policy,
+                seed=config.seed + episode_index + local_episode_index,
+                gamma=config.gamma,
+                gae_lambda=config.gae_lambda,
+                reward_scale=config.reward_scale,
+            )
+            if simulator_steps <= 0:
+                raise RuntimeError(
+                    "A rollout must contain at least one simulator tick."
+                )
+            rollout_batches.append(batch)
+            update_returns.append(float(team_return))
+            update_lengths.append(int(simulator_steps))
+            update_simulator_steps += int(simulator_steps)
+
+        batch = concatenate_batches(rollout_batches)
+        completed_episodes = len(rollout_batches)
 
         policy_decisions = int(batch.actions.shape[0])
         if policy_decisions <= 0:
@@ -191,25 +214,31 @@ def train_policy(
             target_kl=config.target_kl,
         )
 
-        episode_returns.append(float(team_return))
-        episode_lengths.append(int(simulator_steps))
+        episode_returns.extend(update_returns)
+        episode_lengths.extend(update_lengths)
 
-        global_simulator_steps += simulator_steps
+        global_simulator_steps += update_simulator_steps
         total_policy_decisions += policy_decisions
-        episode_index += 1
+        episode_index += completed_episodes
         update_index += 1
+
+        mean_return = float(np.mean(update_returns))
 
         metrics: dict[str, MetricValue] = {
             "update": update_index,
             "global_step": global_simulator_steps,
             "episode": episode_index,
-            "completed_episodes": 1,
-            "episode_return_mean": float(team_return),
-            "episode_length_mean": int(simulator_steps),
-            "rollout_reward_mean": float(team_return) / simulator_steps,
+            "completed_episodes": completed_episodes,
+            "episode_return_mean": mean_return,
+            "episode_return_std": float(np.std(update_returns)),
+            "episode_return_min": float(np.min(update_returns)),
+            "episode_return_max": float(np.max(update_returns)),
+            "episode_length_mean": float(np.mean(update_lengths)),
+            "rollout_reward_mean": float(np.sum(update_returns))
+            / update_simulator_steps,
             "policy_decisions": policy_decisions,
             "total_policy_decisions": total_policy_decisions,
-            "decision_rate": policy_decisions / simulator_steps,
+            "decision_rate": policy_decisions / update_simulator_steps,
             "duration_mean": float(batch.durations.mean()),
             "duration_min": float(batch.durations.min()),
             "duration_max": float(batch.durations.max()),

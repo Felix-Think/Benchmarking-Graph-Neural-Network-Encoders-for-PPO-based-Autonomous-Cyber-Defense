@@ -1,0 +1,93 @@
+{
+  "protocol": {
+    "primary_mode": "stochastic",
+    "independent_unit": "training seed",
+    "training_seeds": [
+      42
+    ],
+    "evaluation_seed_start": 10000,
+    "conditions": [
+      "full",
+      "no_evidence"
+    ],
+    "arm_prefix": "nodemlp",
+    "full_minus_no_evidence_definition": "positive means sensor evidence improved held-out return",
+    "plateau_slope_threshold_per_100k": 50.0
+  },
+  "per_seed": {
+    "42": {
+      "full_mean_return": -867.4,
+      "no_evidence_mean_return": -845.4333333333333,
+      "untrained_full_mean_return": -4952.7,
+      "full_minus_no_evidence": -21.966666666666665,
+      "full_minus_untrained": 4085.3,
+      "full_training_last20_minus_first20": 3480.5714285714284,
+      "full_late_periodic_slope_per_100k": null,
+      "finite_training_metrics": true,
+      "controlled_config_audit": {
+        "passed": true,
+        "expected_difference": {
+          "observation_condition": {
+            "full": "full",
+            "no_evidence": "no_evidence"
+          }
+        },
+        "unexpected_differences": {}
+      }
+    }
+  },
+  "multi_seed": {
+    "full_minus_no_evidence": {
+      "n": 1,
+      "mean": -21.966666666666665,
+      "std": null,
+      "student_t_ci95": null,
+      "positive_zero_negative": [
+        0,
+        0,
+        1
+      ],
+      "values": [
+        -21.966666666666665
+      ]
+    },
+    "full_minus_untrained": {
+      "n": 1,
+      "mean": 4085.3,
+      "std": null,
+      "student_t_ci95": null,
+      "positive_zero_negative": [
+        1,
+        0,
+        0
+      ],
+      "values": [
+        4085.3
+      ]
+    },
+    "full_training_last20_minus_first20": {
+      "n": 1,
+      "mean": 3480.5714285714284,
+      "std": null,
+      "student_t_ci95": null,
+      "positive_zero_negative": [
+        1,
+        0,
+        0
+      ],
+      "values": [
+        3480.5714285714284
+      ]
+    },
+    "full_late_periodic_slope_per_100k": null
+  },
+  "qualification_gates": {
+    "at_least_five_training_seeds": false,
+    "controlled_and_finite": true,
+    "trained_full_beats_untrained": false,
+    "full_training_return_improves": false,
+    "full_beats_trained_no_evidence": false,
+    "late_validation_curve_is_flat": false,
+    "ready_for_encoder_benchmark": false
+  }
+}

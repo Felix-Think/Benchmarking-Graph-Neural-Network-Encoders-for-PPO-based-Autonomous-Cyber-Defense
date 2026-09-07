@@ -1,0 +1,218 @@
+{
+  "protocol": {
+    "primary_mode": "stochastic",
+    "independent_unit": "training seed",
+    "training_seeds": [
+      42,
+      43,
+      44,
+      45,
+      46
+    ],
+    "evaluation_seed_start": 10000,
+    "conditions": [
+      "full",
+      "no_evidence"
+    ],
+    "arm_prefix": "nodemlp",
+    "full_minus_no_evidence_definition": "positive means sensor evidence improved held-out return",
+    "plateau_slope_threshold_per_100k": 50.0
+  },
+  "per_seed": {
+    "42": {
+      "full_mean_return": -497.76666666666665,
+      "no_evidence_mean_return": -1182.3666666666666,
+      "untrained_full_mean_return": -5170.1,
+      "full_minus_no_evidence": 684.6,
+      "full_minus_untrained": 4672.333333333333,
+      "full_training_last20_minus_first20": 995.9008264462809,
+      "full_late_periodic_slope_per_100k": 43.88777555110215,
+      "finite_training_metrics": true,
+      "controlled_config_audit": {
+        "passed": true,
+        "expected_difference": {
+          "observation_condition": {
+            "full": "full",
+            "no_evidence": "no_evidence"
+          }
+        },
+        "unexpected_differences": {}
+      }
+    },
+    "43": {
+      "full_mean_return": -224.9,
+      "no_evidence_mean_return": -1369.2666666666667,
+      "untrained_full_mean_return": -4671.333333333333,
+      "full_minus_no_evidence": 1144.3666666666666,
+      "full_minus_untrained": 4446.433333333333,
+      "full_training_last20_minus_first20": 1427.9090909090908,
+      "full_late_periodic_slope_per_100k": 142.3847695390779,
+      "finite_training_metrics": true,
+      "controlled_config_audit": {
+        "passed": true,
+        "expected_difference": {
+          "observation_condition": {
+            "full": "full",
+            "no_evidence": "no_evidence"
+          }
+        },
+        "unexpected_differences": {}
+      }
+    },
+    "44": {
+      "full_mean_return": -434.23333333333335,
+      "no_evidence_mean_return": -1495.5,
+      "untrained_full_mean_return": -5127.866666666667,
+      "full_minus_no_evidence": 1061.2666666666667,
+      "full_minus_untrained": 4693.633333333333,
+      "full_training_last20_minus_first20": 1504.2314049586778,
+      "full_late_periodic_slope_per_100k": 752.2044088176348,
+      "finite_training_metrics": true,
+      "controlled_config_audit": {
+        "passed": true,
+        "expected_difference": {
+          "observation_condition": {
+            "full": "full",
+            "no_evidence": "no_evidence"
+          }
+        },
+        "unexpected_differences": {}
+      }
+    },
+    "45": {
+      "full_mean_return": -352.06666666666666,
+      "no_evidence_mean_return": -958.2333333333333,
+      "untrained_full_mean_return": -5175.466666666666,
+      "full_minus_no_evidence": 606.1666666666666,
+      "full_minus_untrained": 4823.4,
+      "full_training_last20_minus_first20": 1246.3140495867767,
+      "full_late_periodic_slope_per_100k": 189.67935871743475,
+      "finite_training_metrics": true,
+      "controlled_config_audit": {
+        "passed": true,
+        "expected_difference": {
+          "observation_condition": {
+            "full": "full",
+            "no_evidence": "no_evidence"
+          }
+        },
+        "unexpected_differences": {}
+      }
+    },
+    "46": {
+      "full_mean_return": -780.2333333333333,
+      "no_evidence_mean_return": -1597.7,
+      "untrained_full_mean_return": -5353.533333333334,
+      "full_minus_no_evidence": 817.4666666666667,
+      "full_minus_untrained": 4573.3,
+      "full_training_last20_minus_first20": 1006.0826446280992,
+      "full_late_periodic_slope_per_100k": 118.43687374749443,
+      "finite_training_metrics": true,
+      "controlled_config_audit": {
+        "passed": true,
+        "expected_difference": {
+          "observation_condition": {
+            "full": "full",
+            "no_evidence": "no_evidence"
+          }
+        },
+        "unexpected_differences": {}
+      }
+    }
+  },
+  "multi_seed": {
+    "full_minus_no_evidence": {
+      "n": 5,
+      "mean": 862.7733333333333,
+      "std": 233.63423384046743,
+      "student_t_ci95": [
+        572.6781164257047,
+        1152.868550240962
+      ],
+      "positive_zero_negative": [
+        5,
+        0,
+        0
+      ],
+      "values": [
+        684.6,
+        1144.3666666666666,
+        1061.2666666666667,
+        606.1666666666666,
+        817.4666666666667
+      ]
+    },
+    "full_minus_untrained": {
+      "n": 5,
+      "mean": 4641.82,
+      "std": 140.94140744768117,
+      "student_t_ci95": [
+        4466.818128516046,
+        4816.821871483953
+      ],
+      "positive_zero_negative": [
+        5,
+        0,
+        0
+      ],
+      "values": [
+        4672.333333333333,
+        4446.433333333333,
+        4693.633333333333,
+        4823.4,
+        4573.3
+      ]
+    },
+    "full_training_last20_minus_first20": {
+      "n": 5,
+      "mean": 1236.087603305785,
+      "std": 234.19710206855157,
+      "student_t_ci95": [
+        945.2934931836116,
+        1526.8817134279584
+      ],
+      "positive_zero_negative": [
+        5,
+        0,
+        0
+      ],
+      "values": [
+        995.9008264462809,
+        1427.9090909090908,
+        1504.2314049586778,
+        1246.3140495867767,
+        1006.0826446280992
+      ]
+    },
+    "full_late_periodic_slope_per_100k": {
+      "n": 5,
+      "mean": 249.3186372745488,
+      "std": 286.0147154468432,
+      "student_t_ci95": [
+        -105.81553785229107,
+        604.4528124013887
+      ],
+      "positive_zero_negative": [
+        5,
+        0,
+        0
+      ],
+      "values": [
+        43.88777555110215,
+        142.3847695390779,
+        752.2044088176348,
+        189.67935871743475,
+        118.43687374749443
+      ]
+    }
+  },
+  "qualification_gates": {
+    "at_least_five_training_seeds": true,
+    "controlled_and_finite": true,
+    "trained_full_beats_untrained": true,
+    "full_training_return_improves": true,
+    "full_beats_trained_no_evidence": true,
+    "late_validation_curve_is_flat": false,
+    "ready_for_encoder_benchmark": false
+  }
+}
