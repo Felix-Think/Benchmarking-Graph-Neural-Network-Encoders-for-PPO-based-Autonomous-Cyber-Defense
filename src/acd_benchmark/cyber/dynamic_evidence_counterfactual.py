@@ -67,6 +67,9 @@ class DynamicEvidenceCounterfactual:
     def last_canonical(self):
         return self.env.last_canonical
 
+    def cyber_summary(self) -> dict:
+        return self.env.cyber_summary()
+
     @property
     def process_name(self) -> str:
         if self.transform == "time_shift":

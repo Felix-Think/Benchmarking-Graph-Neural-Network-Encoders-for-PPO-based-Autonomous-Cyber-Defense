@@ -1,6 +1,9 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from contextlib import contextmanager
 from pathlib import Path
-
+import random
+from acd_benchmark.metrics.agregate import aggregate_episodes
+from acd_benchmark.metrics.resources import ResourceMonitor, runtime_metadata
 import numpy as np
 import torch
 
@@ -12,6 +15,9 @@ class EvaluationResult:
     episode_policy_decisions: list[int]
     action_counts: dict[str, int]
     deterministic: bool
+    episode_cyber_metrics: list[dict]
+    compute_metrics: dict = field(default_factory=dict)
+    compute_metadata: dict = field(default_factory=dict)
 
     @property
     def mean_return(self) -> float:
@@ -50,6 +56,10 @@ class EvaluationResult:
             "episode_policy_decisions": self.episode_policy_decisions,
             "action_counts": self.action_counts,
             "deterministic": self.deterministic,
+            "episode_cyber_metrics": self.episode_cyber_metrics,
+            "compute_metrics": self.compute_metrics,
+            "compute_metadata": self.compute_metadata,
+            "metrics_summary": aggregate_episodes(self.episode_returns, self.episode_cyber_metrics)
         }
 
 
@@ -129,7 +139,10 @@ def evaluate_policy(
     episode_policy_decisions: list[int] = []
     action_counts: dict[str, int] = {}
     reward_agent = env.possible_agents[0]
+    episode_cyber_metrics: list[dict] = []
 
+    monitor = ResourceMonitor(device)
+    monitor.__enter__()
     try:
         for episode_index in range(episodes):
             observations, infos = env.reset(seed=seed + episode_index)
@@ -201,11 +214,27 @@ def evaluate_policy(
                 observations = next_observations
                 infos = next_infos
 
+            cyber = env.cyber_summary()
+            if cyber["ticks"] != simulator_steps:
+                raise RuntimeError(
+                    "Cyber metrics tick count does not match the evaluated episode."
+                )
+            episode_cyber_metrics.append(cyber)
+
             episode_returns.append(episode_return)
             episode_lengths.append(simulator_steps)
             episode_policy_decisions.append(policy_decisions)
     finally:
         policy.train(was_training)
+        monitor.__exit__(None, None, None)
+
+    compute_metrics = monitor.summary()
+    compute_metrics["simulator_ticks"] = sum(episode_lengths)
+    compute_metrics["simulator_ticks_per_second"] = (
+        sum(episode_lengths) / compute_metrics["wall_seconds"]
+        if compute_metrics["wall_seconds"] > 0 else None
+    )
+    compute_metrics["seconds_per_episode"] = compute_metrics["wall_seconds"] / episodes
 
     return EvaluationResult(
         episode_returns=episode_returns,
@@ -213,6 +242,9 @@ def evaluate_policy(
         episode_policy_decisions=episode_policy_decisions,
         action_counts=action_counts,
         deterministic=deterministic,
+        episode_cyber_metrics = episode_cyber_metrics,
+        compute_metrics=compute_metrics,
+        compute_metadata=runtime_metadata(device),
     )
 
 
@@ -254,6 +286,23 @@ def evaluate_policy_modes(
     )
 
 
+@contextmanager
+def preserved_evaluation_rng():
+    """Keep evaluation (including environment construction) out of training RNG."""
+    python_state = random.getstate()
+    numpy_state = np.random.get_state()
+    cpu_state = torch.random.get_rng_state()
+    cuda_states = torch.cuda.get_rng_state_all() if torch.cuda.is_available() else None
+    try:
+        yield
+    finally:
+        random.setstate(python_state)
+        np.random.set_state(numpy_state)
+        torch.random.set_rng_state(cpu_state)
+        if cuda_states is not None:
+            torch.cuda.set_rng_state_all(cuda_states)
+
+
 def evaluate_policy_with_preserved_rng(
     env,
     policy: torch.nn.Module,
@@ -264,13 +313,9 @@ def evaluate_policy_with_preserved_rng(
     action_seed: int,
 ) -> EvaluationResult:
     """Evaluate without changing the action-sampling RNG used by training."""
-    cpu_rng_state = torch.random.get_rng_state()
-    cuda_rng_states = (
-        torch.cuda.get_rng_state_all()
-        if torch.cuda.is_available()
-        else None
-    )
-    try:
+    with preserved_evaluation_rng():
+        random.seed(action_seed)
+        np.random.seed(action_seed)
         torch.manual_seed(action_seed)
         if torch.cuda.is_available():
             torch.cuda.manual_seed_all(action_seed)
@@ -282,7 +327,3 @@ def evaluate_policy_with_preserved_rng(
             seed=seed,
             deterministic=deterministic,
         )
-    finally:
-        torch.random.set_rng_state(cpu_rng_state)
-        if cuda_rng_states is not None:
-            torch.cuda.set_rng_state_all(cuda_rng_states)

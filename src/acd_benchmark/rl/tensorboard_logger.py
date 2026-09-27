@@ -85,6 +85,12 @@ class TensorBoardLogger:
             if scalar is not None:
                 self.writer.add_scalar(tag, scalar, global_step)
 
+        for name, value in metrics.items():
+            if name.startswith(("cyber/", "compute/", "observation/")):
+                scalar = self._to_scalar(value)
+                if scalar is not None:
+                    self.writer.add_scalar(f"training/{name}", scalar, global_step)
+
     def log_evaluation(
         self,
         result,
@@ -105,6 +111,22 @@ class TensorBoardLogger:
         }
         for tag, value in evaluation_scalars.items():
             self.writer.add_scalar(tag, value, global_step)
+
+        record = result.to_dict()
+        for name, value in record.get("compute_metrics", {}).items():
+            scalar = self._to_scalar(value)
+            if scalar is not None:
+                self.writer.add_scalar(f"{namespace}/compute/{name}", scalar, global_step)
+
+        for name, stats in record["metrics_summary"].items():
+            if name == "episode_return":
+                continue
+            for stat, value in stats.items():
+                scalar = self._to_scalar(value)
+                if scalar is not None:
+                    self.writer.add_scalar(
+                        f"{namespace}/cyber/{name}/{stat}", scalar, global_step
+                    )
 
         self.writer.add_histogram(
             f"{namespace}/episode_returns",

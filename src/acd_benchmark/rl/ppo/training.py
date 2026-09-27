@@ -1,4 +1,5 @@
 from dataclasses import asdict, dataclass
+from contextlib import nullcontext
 from pathlib import Path
 from typing import Callable, Mapping
 import random
@@ -8,7 +9,9 @@ import torch
 
 from acd_benchmark.rl.ppo.update import ppo_update
 from acd_benchmark.rl.rollout.rollout import collect_rollout, concatenate_batches
-
+from acd_benchmark.rl.rollout.parallel import episode_action_rng, rollout_action_seed
+from acd_benchmark.metrics.agregate import aggregate_episodes
+from acd_benchmark.metrics.compute import ComputeMetrics
 
 MetricValue = float | int | bool | None
 UpdateCallback = Callable[[dict[str, MetricValue]], None]
@@ -32,6 +35,9 @@ class PPOTrainingConfig:
     seed: int = 42
     device: str = "cpu"
     checkpoint_path: str | None = None
+    checkpoint_steps: tuple[int, ...] = ()
+    rollout_workers: int = 1
+    action_seed_protocol: str = "global"
 
 
 @dataclass
@@ -43,6 +49,8 @@ class TrainingResult:
     total_policy_decisions: int
     total_episodes: int
     total_updates: int
+    episode_cyber_metrics: list[dict]
+    compute_metrics: dict
 
     @property
     def total_timesteps(self) -> int:
@@ -68,6 +76,7 @@ def save_training_checkpoint(
 ) -> None:
     checkpoint_path = Path(path)
     checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
+    temporary_path = checkpoint_path.with_suffix(".tmp")
     torch.save(
         {
             "policy_state_dict": policy.state_dict(),
@@ -76,15 +85,24 @@ def save_training_checkpoint(
             "history": result.history,
             "episode_returns": result.episode_returns,
             "episode_lengths": result.episode_lengths,
+            "episode_cyber_metrics": result.episode_cyber_metrics,
+            "compute_metrics": result.compute_metrics,
             "total_simulator_steps": result.total_simulator_steps,
             "total_policy_decisions": result.total_policy_decisions,
             "total_episodes": result.total_episodes,
             "total_updates": result.total_updates,
             # Compatibility with existing checkpoint readers.
             "total_timesteps": result.total_simulator_steps,
+            "rng_state": {
+                "python": random.getstate(),
+                "numpy": np.random.get_state(),
+                "torch": torch.random.get_rng_state(),
+                "cuda": torch.cuda.get_rng_state_all() if torch.cuda.is_available() else None,
+            },
         },
-        checkpoint_path,
+        temporary_path,
     )
+    temporary_path.replace(checkpoint_path)
 
 
 def save_best_evaluation_checkpoint(
@@ -132,10 +150,13 @@ def train_policy(
     *,
     optimizer: torch.optim.Optimizer | None = None,
     on_update: UpdateCallback | None = None,
+    on_milestone: Callable[[TrainingResult, int], None] | None = None,
+    episode_collector=None,
 ) -> TrainingResult:
     """Train one shared policy using complete CAGE 4 episodes.
 
-    Each PPO update combines ``episodes_per_update`` sequential trajectories.
+    Each PPO update combines ``episodes_per_update`` on-policy trajectories.
+    An optional collector runs complete episodes concurrently, not PPO updates.
     The budget is measured in simulator ticks and rollouts are never cut in the
     middle of an episode. The final update can therefore exceed the requested
     budget by at most one episode.
@@ -145,8 +166,27 @@ def train_policy(
     assert config.minibatch_size > 0
     assert config.update_epochs > 0
     assert config.reward_scale > 0
+    if config.action_seed_protocol not in ("global", "per_episode_v1"):
+        raise ValueError("Unknown action RNG protocol")
+    from acd_benchmark.rl.runtime import learner_device
+
+    device = learner_device(config.device)
+    if device.type == "cuda" and episode_collector is None:
+        raise ValueError("CUDA learner requires CPU episode workers, even with one worker")
+    if config.rollout_workers not in (1, 2, 3):
+        raise ValueError("Use 1-3 rollout workers")
+    if config.rollout_workers > 1 and episode_collector is None:
+        raise ValueError("Parallel training requires an episode collector")
+    if episode_collector is not None:
+        if config.action_seed_protocol != "per_episode_v1":
+            raise ValueError("Parallel collection requires per_episode_v1 RNG")
+        if episode_collector.workers != config.rollout_workers:
+            raise ValueError("Configured and actual rollout worker counts differ")
+    if config.checkpoint_steps and not config.checkpoint_path:
+        raise ValueError("Milestones require checkpoint_path")
+    if any(step <= 0 or step > config.total_simulator_steps for step in config.checkpoint_steps):
+        raise ValueError("Checkpoint steps must lie within the training budget")
     seed_runtime(config.seed)
-    device = torch.device(config.device)
     policy.to(device)
 
     if optimizer is None:
@@ -163,59 +203,103 @@ def train_policy(
     episode_index = 0
     update_index = 0
 
+    episode_cyber_metrics = []
+    compute = ComputeMetrics(device)
+    pending_milestones = sorted(set(config.checkpoint_steps))
+
+    def current_result():
+        return TrainingResult(
+            history=list(history),
+            episode_returns=list(episode_returns),
+            episode_lengths=list(episode_lengths),
+            total_simulator_steps=global_simulator_steps,
+            total_policy_decisions=total_policy_decisions,
+            total_episodes=episode_index,
+            total_updates=update_index,
+            episode_cyber_metrics=list(episode_cyber_metrics),
+            compute_metrics=compute.summary(),
+        )
+
     while global_simulator_steps < config.total_simulator_steps:
         rollout_batches = []
         update_returns = []
         update_lengths = []
         update_simulator_steps = 0
+        update_cyber_metrics = []
 
-        for local_episode_index in range(config.episodes_per_update):
-            if (
-                rollout_batches
-                and global_simulator_steps + update_simulator_steps
-                >= config.total_simulator_steps
-            ):
-                break
+        compute.start_training()
+        def serial_episodes():
+            for local_index in range(config.episodes_per_update):
+                if rollout_batches and global_simulator_steps + update_simulator_steps >= config.total_simulator_steps:
+                    break
+                action_seed = rollout_action_seed(config.seed, episode_index + local_index)
+                independent_rng = config.action_seed_protocol == "per_episode_v1"
+                with episode_action_rng(action_seed) if independent_rng else nullcontext():
+                    batch, score, ticks = collect_rollout(
+                        env=env, policy=policy,
+                        seed=config.seed + episode_index + local_index,
+                        gamma=config.gamma, gae_lambda=config.gae_lambda,
+                        reward_scale=config.reward_scale,
+                    )
+                cyber = env.cyber_summary()
+                if independent_rng:
+                    cyber["rollout_action_seed"] = action_seed
+                yield batch, score, ticks, cyber
 
-            batch, team_return, simulator_steps = collect_rollout(
-                env=env,
-                policy=policy,
-                seed=config.seed + episode_index + local_episode_index,
-                gamma=config.gamma,
-                gae_lambda=config.gae_lambda,
-                reward_scale=config.reward_scale,
-            )
-            if simulator_steps <= 0:
-                raise RuntimeError(
-                    "A rollout must contain at least one simulator tick."
+        with compute.measure("rollout"):
+            if episode_collector is None:
+                episodes = serial_episodes()
+            else:
+                count = episode_collector.episode_count(
+                    config.episodes_per_update, config.total_simulator_steps - global_simulator_steps,
                 )
-            rollout_batches.append(batch)
-            update_returns.append(float(team_return))
-            update_lengths.append(int(simulator_steps))
-            update_simulator_steps += int(simulator_steps)
+                indices = range(episode_index, episode_index + count)
+                episodes = episode_collector.collect(
+                    policy, episode_seeds=[config.seed + i for i in indices],
+                    action_seeds=[rollout_action_seed(config.seed, i) for i in indices],
+                    gamma=config.gamma, gae_lambda=config.gae_lambda,
+                    reward_scale=config.reward_scale,
+                )
 
-        batch = concatenate_batches(rollout_batches)
+            for batch, team_return, simulator_steps, cyber in episodes:
+                if simulator_steps <= 0:
+                    raise RuntimeError(
+                        "A rollout must contain at least one simulator tick."
+                    )
+                assert cyber["ticks"] == simulator_steps
+                update_cyber_metrics.append(cyber)
+
+                rollout_batches.append(batch)
+                update_returns.append(float(team_return))
+                update_lengths.append(int(simulator_steps))
+                update_simulator_steps += int(simulator_steps)
+
+            batch = concatenate_batches(rollout_batches)
         completed_episodes = len(rollout_batches)
 
         policy_decisions = int(batch.actions.shape[0])
         if policy_decisions <= 0:
             raise RuntimeError("A rollout must contain at least one policy decision.")
 
-        update_metrics = ppo_update(
-            policy=policy,
-            batch=batch,
-            optimizer=optimizer,
-            update_epochs=config.update_epochs,
-            minibatch_size=config.minibatch_size,
-            clip_coef=config.clip_coef,
-            value_coef=config.value_coef,
-            entropy_coef=config.entropy_coef,
-            max_grad_norm=config.max_grad_norm,
-            target_kl=config.target_kl,
-        )
+        with compute.measure("ppo_update"):
+            update_metrics = ppo_update(
+                policy=policy,
+                batch=batch,
+                optimizer=optimizer,
+                update_epochs=config.update_epochs,
+                minibatch_size=config.minibatch_size,
+                clip_coef=config.clip_coef,
+                value_coef=config.value_coef,
+                entropy_coef=config.entropy_coef,
+                max_grad_norm=config.max_grad_norm,
+                target_kl=config.target_kl,
+            )
+        compute.end_training(update_simulator_steps)
 
         episode_returns.extend(update_returns)
         episode_lengths.extend(update_lengths)
+        
+        episode_cyber_metrics.extend(update_cyber_metrics)
 
         global_simulator_steps += update_simulator_steps
         total_policy_decisions += policy_decisions
@@ -243,23 +327,45 @@ def train_policy(
             "duration_min": float(batch.durations.min()),
             "duration_max": float(batch.durations.max()),
             "reward_scale": config.reward_scale,
+            "rollout_workers": config.rollout_workers,
             "scaled_transition_reward_mean": float(batch.rewards.mean()),
         }
         metrics.update(update_metrics)
+        metrics.update({f"compute/{key}": value for key, value in compute.summary().items()})
+        retentions = [
+            row["observation_mask"]["retention"]
+            for row in update_cyber_metrics if "observation_mask" in row
+        ]
+        if retentions:
+            metrics["observation/retention_mean"] = float(np.mean(retentions))
+            for q in (1.0, 0.75, 0.5, 0.25):
+                metrics[f"observation/q_{q:g}_episodes"] = retentions.count(q)
+
+        summary = aggregate_episodes(update_returns, update_cyber_metrics)
+        for name, stats in summary.items():
+            if name == "episode_return":
+                continue
+            for stat, value in stats.items():
+                metrics[f"cyber/{name}/{stat}"] = value
+
         history.append(metrics)
 
         if on_update is not None:
             on_update(metrics)
 
-    result = TrainingResult(
-        history=history,
-        episode_returns=episode_returns,
-        episode_lengths=episode_lengths,
-        total_simulator_steps=global_simulator_steps,
-        total_policy_decisions=total_policy_decisions,
-        total_episodes=episode_index,
-        total_updates=update_index,
-    )
+        # Checkpoint only at completed PPO updates; do not change rollout grouping.
+        while pending_milestones and global_simulator_steps >= pending_milestones[0]:
+            requested_step = pending_milestones.pop(0)
+            snapshot = current_result()
+            milestone_path = (
+                Path(config.checkpoint_path).parent / "milestones"
+                / f"step_{requested_step}" / "checkpoint.pt"
+            )
+            save_training_checkpoint(milestone_path, policy, optimizer, config, snapshot)
+            if on_milestone is not None:
+                on_milestone(snapshot, requested_step)
+
+    result = current_result()
 
     if config.checkpoint_path is not None:
         save_training_checkpoint(

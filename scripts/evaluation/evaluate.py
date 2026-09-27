@@ -126,7 +126,9 @@ def main(argv=None):
         **result.to_dict(),
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(record, indent=2), encoding="utf-8")
+    args.output.write_text(
+        json.dumps(record, indent=2, allow_nan=False), encoding="utf-8"
+    )
     print(f"deterministic mean_return={result.deterministic.mean_return:.2f}")
     print(f"stochastic mean_return={result.stochastic.mean_return:.2f}")
     print(f"output={args.output}")

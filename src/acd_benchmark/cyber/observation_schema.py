@@ -9,7 +9,7 @@ import numpy as np
 
 SUBNETS = (
     "admin_network_subnet",
-    "contractor_network_subnet",
+    "contractor_network_subnet", # Subnet hoạt động ban đầu của red
     "internet_subnet",
     "office_network_subnet",
     "operational_zone_a_subnet",
@@ -41,16 +41,18 @@ NUM_SUBNET_NODES = len(SUBNETS)
 NUM_NODES = NUM_SUBNET_NODES + MAX_LOCAL_HOSTS
 
 GLOBAL_FEATURES = (
+    #ba giai đoạn nhiệm vụ
     "mission_phase_0",
     "mission_phase_1",
     "mission_phase_2",
+    #kết quả từ hành động trước
     "success_unknown",
     "success_false",
     "success_true",
     "success_in_progress",
 )
 
-VALID_VARIANTS = ("instant", "belief", "action_aware")
+VALID_VARIANTS = ("instant", "belief", "action_aware")# bằng chứng ở bước hiện tại, thêm Memory TTL, them trạng thái suy ra từ hành động thành công
 
 
 CANONICAL_SCHEMA = "v2"
@@ -137,12 +139,12 @@ CURRENT_FEATURES = (
 
 @dataclass(frozen=True)
 class CanonicalObservation:
-    node_features: np.ndarray
-    host_membership: np.ndarray
-    structural_adjacency: np.ndarray
-    communication_policy: np.ndarray
-    firewall_blocks: np.ndarray
-    global_features: np.ndarray
+    node_features: np.ndarray #[57, 79]
+    host_membership: np.ndarray #[48,9]
+    structural_adjacency: np.ndarray #[9, 9]
+    communication_policy: np.ndarray #[9, 9]
+    firewall_blocks: np.ndarray #[9, 9]
+    global_features: np.ndarray #[7, ]
 
     def flat_view(self) -> np.ndarray:
         return np.concatenate(

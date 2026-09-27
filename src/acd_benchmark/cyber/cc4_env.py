@@ -18,7 +18,7 @@ BLUE_AGENTS = tuple(f"blue_agent_{index}" for index in range(5))
 def make_cc4_env(
     episode_steps: int = 200,
     seed: int | None = None,
-    environment_distribution: str = "official",
+    environment_distribution: str = "random_host",
 ) -> CybORG:
     if environment_distribution not in VALID_ENVIRONMENT_DISTRIBUTIONS:
         raise ValueError(
@@ -26,9 +26,9 @@ def make_cc4_env(
             f"{VALID_ENVIRONMENT_DISTRIBUTIONS}"
         )
     generator_class = (
-        EnterpriseScenarioGenerator
-        if environment_distribution == "official"
-        else RandomPivotEnterpriseScenarioGenerator
+        RandomPivotEnterpriseScenarioGenerator
+        if environment_distribution == "random_host"
+        else EnterpriseScenarioGenerator
     )
     scenario_generator = generator_class(
         blue_agent_class=SleepAgent,

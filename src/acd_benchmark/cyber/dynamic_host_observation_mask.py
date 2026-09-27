@@ -75,6 +75,9 @@ class FixedBudgetDynamicHostMask:
     def last_canonical(self):
         return self.env.last_canonical
 
+    def cyber_summary(self) -> dict:
+        return self.env.cyber_summary()
+
     def _rng(self, agent_index: int) -> np.random.Generator:
         selection_tick = self._tick if self.mask_process == "iid" else 0
         seed_sequence = np.random.SeedSequence(

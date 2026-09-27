@@ -4,6 +4,7 @@ from collections.abc import Mapping
 
 from acd_benchmark.cyber.cc4_structured_action_env import NUM_STRUCTURED_ACTIONS
 from acd_benchmark.rl.policies.gcn import StructuredGCNActorCritic
+from acd_benchmark.rl.policies.graphsage import StructuredGraphSAGEActorCritic
 from acd_benchmark.rl.policies.nodemlp import StructuredNodeMLPActorCritic
 
 
@@ -27,6 +28,12 @@ def build_policy(config: Mapping):
             **common,
             gcn_hidden_dim=int(config["gcn_hidden_dim"]),
             gcn_layers=int(config["gcn_layers"]),
+        )
+    if policy_type == "structured_graphsage":
+        return StructuredGraphSAGEActorCritic(
+            **common,
+            sage_hidden_dim=int(config["sage_hidden_dim"]),
+            sage_layers=int(config["sage_layers"]),
         )
     raise ValueError(
         f"Unsupported policy {policy_type!r}; use the archive for legacy policies"

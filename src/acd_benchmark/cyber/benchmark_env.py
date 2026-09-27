@@ -7,7 +7,7 @@ from acd_benchmark.cyber.canonical_observation_condition import (
 )
 from acd_benchmark.cyber.cc4_canonical_env import CC4CanonicalFlatEnv
 from acd_benchmark.cyber.cc4_structured_action_env import CC4StructuredActionEnv
-
+from acd_benchmark.metrics.wrapper import CyberMetricsEnv
 
 def make_benchmark_env(config: Mapping, *, seed: int | None = None):
     canonical = CC4CanonicalFlatEnv(
@@ -23,6 +23,7 @@ def make_benchmark_env(config: Mapping, *, seed: int | None = None):
         semantic_action_mask=bool(config.get("semantic_action_mask", False)),
     )
     structured = CC4StructuredActionEnv(canonical)
-    return CanonicalObservationCondition(
+    condition = CanonicalObservationCondition(
         structured, condition=str(config.get("observation_condition", "full"))
     )
+    return CyberMetricsEnv(condition, cyborg = canonical.env.env)

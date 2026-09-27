@@ -151,7 +151,7 @@ class StructuredActionActorCritic(CategoricalActorCritic):
             NUM_SUBNET_NODES,
             device=nodes.device,
         ).unsqueeze(0)
-        controlled = nodes[:, :NUM_SUBNET_NODES, controlled_index] > 0.5
+        controlled = nodes[:, :NUM_SUBNET_NODES, controlled_index] > 0.5 # 9 nodes đâu la subnet và lấy cột controlled_index
         # Controlled subnet indices come first in ascending canonical order.
         # Remaining entries only pad single-subnet agents and are action-masked.
         scores = controlled.float() * 100.0 - subnet_indices.float()
@@ -236,9 +236,9 @@ class StructuredActionActorCritic(CategoricalActorCritic):
         ) = self._unpack(observation)
         node_embeddings = self.encode_nodes(nodes, membership, structural)
         exists = nodes[:, :, self._exists_index].unsqueeze(-1)
-        pooled = (node_embeddings * exists).sum(dim=1) / exists.sum(dim=1).clamp_min(
+        pooled = (node_embeddings * exists).sum(dim=1) / exists.sum(dim=1).clamp_min( # nhan exist là broadcast để lọc những node ko tồn tài (exist = 0) trong obs này
             1.0
-        )
+        ) # masked mean pooling
         context = self.context_encoder(torch.cat((pooled, global_features), dim=-1))
 
         host_embeddings = node_embeddings[

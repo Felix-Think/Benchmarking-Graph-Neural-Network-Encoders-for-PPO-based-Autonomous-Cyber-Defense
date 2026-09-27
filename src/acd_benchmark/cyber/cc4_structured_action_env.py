@@ -17,6 +17,7 @@ from acd_benchmark.cyber.observation_schema import (
 HOST_ACTIONS = ("Analyse", "DeployDecoy", "Remove", "Restore")
 EDGE_ACTIONS = ("AllowTrafficZone", "BlockTrafficZone")
 GLOBAL_ACTIONS = ("Monitor", "Sleep")
+
 HOST_SLOTS_PER_SUBNET = MAX_SERVERS + MAX_USERS
 STRUCTURED_HOST_SLOTS = MAX_SUBNETS_PER_AGENT * HOST_SLOTS_PER_SUBNET
 STRUCTURED_EDGE_SLOTS = MAX_SUBNETS_PER_AGENT * (len(SUBNETS) - 1)

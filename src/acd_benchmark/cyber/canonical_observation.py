@@ -367,7 +367,7 @@ class HostCompressedBuilder:
             global_features=global_features,
         )
 
-    def _node_index(self, hostname: str | None) -> int | None:
+    def _node_index(self, hostname: str | None) -> int | None: # Builder for each agent has shape [57, 79]
         if not hostname:
             return None
         subnet = self._subnet_from_hostname(hostname)
@@ -378,11 +378,11 @@ class HostCompressedBuilder:
         if subnet not in AGENT_SUBNETS[self.agent]:
             return None
 
-        local_subnet_index = AGENT_SUBNETS[self.agent].index(subnet)
-        if "_server_host_" in hostname:
-            host_offset = int(hostname.rsplit("_", 1)[-1])
+        local_subnet_index = AGENT_SUBNETS[self.agent].index(subnet)  #[0,1,2]
+        if "_server_host_" in hostname: #[0...5]
+            host_offset = int(hostname.rsplit("_", 1)[-1]) 
         elif "_user_host_" in hostname:
-            host_offset = MAX_SERVERS + int(hostname.rsplit("_", 1)[-1])
+            host_offset = MAX_SERVERS + int(hostname.rsplit("_", 1)[-1]) # [6...15]
         else:
             return None
         if not 0 <= host_offset < MAX_HOSTS_PER_SUBNET:

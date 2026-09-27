@@ -1,14 +1,20 @@
 import math
 
 import numpy as np
+import pytest
 import torch
 
+from acd_benchmark.metrics.cyber import CyberMetrics
 from acd_benchmark.rl.policies.actor_critic import CategoricalActorCritic
 from acd_benchmark.rl.ppo.evaluation import (
     evaluate_policy,
     load_policy_checkpoint,
 )
 from acd_benchmark.rl.ppo.training import PPOTrainingConfig, train_policy
+from dataclasses import replace
+from contextlib import contextmanager
+from acd_benchmark.metrics.compute import ComputeMetrics
+from acd_benchmark.rl.ppo.evaluation import preserved_evaluation_rng
 
 
 class TinyPolicy(CategoricalActorCritic):
@@ -46,6 +52,10 @@ class TinyEpisodeEnv:
 
     def reset(self, seed=None):
         self.step_count = 0
+        self.metrics = CyberMetrics()
+        self.metrics.reset({
+            "test_host": {"subnet": "test_zone", "has_ot": True, "protected": True},
+        })
         observations = {
             agent: np.zeros(4, dtype=np.float32) for agent in self.possible_agents
         }
@@ -62,6 +72,7 @@ class TinyEpisodeEnv:
     def step(self, actions):
         assert set(actions) == set(self.possible_agents)
         self.step_count += 1
+        self.metrics.update(0, {"test_host"}, set())
         observations = {
             agent: np.full(4, self.step_count, dtype=np.float32)
             for agent in self.possible_agents
@@ -80,9 +91,71 @@ class TinyEpisodeEnv:
         }
         return observations, rewards, terminated, truncated, infos
 
+    def cyber_summary(self):
+        return self.metrics.summary()
+
     @staticmethod
     def action_labels(agent):
         return (f"{agent}: action_0", f"{agent}: action_1")
+
+
+def test_resource_instrumentation_does_not_change_learning(monkeypatch):
+    def policy():
+        torch.manual_seed(7)
+        return TinyPolicy(4, 2, 8, 8, 8)
+
+    config = PPOTrainingConfig(total_simulator_steps=10, episodes_per_update=2, update_epochs=1, minibatch_size=4)
+    measured = policy()
+    with_metrics = train_policy(TinyEpisodeEnv(), measured, config)
+
+    @contextmanager
+    def unmeasured(self, stage):
+        yield
+
+    monkeypatch.setattr(ComputeMetrics, "measure", unmeasured)
+    reference = policy()
+    without_metrics = train_policy(TinyEpisodeEnv(), reference, config)
+    assert with_metrics.episode_returns == without_metrics.episode_returns
+    for left, right in zip(measured.parameters(), reference.parameters(), strict=True):
+        assert torch.equal(left, right)
+    for left, right in zip(with_metrics.history, without_metrics.history, strict=True):
+        assert {k: v for k, v in left.items() if not k.startswith("compute/")} == {
+            k: v for k, v in right.items() if not k.startswith("compute/")
+        }
+
+
+def test_milestones_do_not_change_training_trajectory(tmp_path):
+    def policy():
+        torch.manual_seed(123)
+        return TinyPolicy(4, 2, 8, 8, 8)
+
+    config = PPOTrainingConfig(
+        total_simulator_steps=10, episodes_per_update=2,
+        update_epochs=1, minibatch_size=4,
+    )
+    reference = policy()
+    train_policy(TinyEpisodeEnv(), reference, config)
+    observed = []
+
+    def milestone(result, requested):
+        observed.append((requested, result.total_simulator_steps))
+        path = tmp_path / "milestones" / f"step_{requested}" / "checkpoint.pt"
+        record = torch.load(path)
+        assert record["total_simulator_steps"] == result.total_simulator_steps
+        assert "optimizer_state_dict" in record
+        with preserved_evaluation_rng():
+            torch.rand(100)
+            np.random.random(10)
+
+    candidate = policy()
+    train_policy(
+        TinyEpisodeEnv(), candidate,
+        replace(config, checkpoint_path=str(tmp_path / "checkpoint.pt"), checkpoint_steps=(5, 10)),
+        on_milestone=milestone,
+    )
+    assert observed == [(5, 6), (10, 12)]
+    for left, right in zip(reference.parameters(), candidate.parameters(), strict=True):
+        assert torch.equal(left, right)
 
 
 def test_train_policy_tracks_updates_episodes_and_checkpoint(tmp_path):
@@ -188,4 +261,19 @@ def test_evaluate_policy_reports_returns_lengths_and_actions():
     assert result.mean_return == 3.0
     assert result.std_return == 0.0
     assert sum(result.action_counts.values()) == 24
+    assert policy.training
+    assert [row["ticks"] for row in result.episode_cyber_metrics] == result.episode_lengths
+
+
+def test_evaluate_policy_rejects_mismatched_metric_ticks_and_restores_mode():
+    class BadMetricsEnv(TinyEpisodeEnv):
+        def cyber_summary(self):
+            summary = super().cyber_summary()
+            summary["ticks"] += 1
+            return summary
+
+    policy = TinyPolicy(4, 2, 8, 8, 8)
+    policy.train()
+    with pytest.raises(RuntimeError, match="tick count"):
+        evaluate_policy(BadMetricsEnv(), policy, episodes=1)
     assert policy.training

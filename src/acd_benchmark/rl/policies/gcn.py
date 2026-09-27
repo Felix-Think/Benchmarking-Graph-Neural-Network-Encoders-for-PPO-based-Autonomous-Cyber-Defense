@@ -2,7 +2,8 @@ import torch
 from torch import nn
 from torch_geometric.nn import GCNConv
 
-from acd_benchmark.cyber.observation_schema import NUM_NODES, NUM_SUBNET_NODES
+from acd_benchmark.cyber.observation_schema import NUM_NODES
+from acd_benchmark.rl.policies.graph_edges import batched_edge_index
 from acd_benchmark.rl.policies.structured_action import StructuredActionActorCritic
 
 
@@ -44,31 +45,7 @@ class StructuredGCNActorCritic(StructuredActionActorCritic):
             )
         )
 
-    @staticmethod
-    def _batched_edge_index(
-        membership: torch.Tensor,
-        structural: torch.Tensor,
-    ) -> torch.Tensor:
-        structural_edges = (structural > 0).nonzero(as_tuple=False)
-        membership_edges = (membership > 0).nonzero(as_tuple=False)
-        sources: list[torch.Tensor] = []
-        destinations: list[torch.Tensor] = []
-        if structural_edges.numel() > 0:
-            offsets = structural_edges[:, 0] * NUM_NODES
-            sources.append(offsets + structural_edges[:, 1])
-            destinations.append(offsets + structural_edges[:, 2])
-        if membership_edges.numel() > 0:
-            offsets = membership_edges[:, 0] * NUM_NODES
-            host_nodes = offsets + NUM_SUBNET_NODES + membership_edges[:, 1]
-            subnet_nodes = offsets + membership_edges[:, 2]
-            sources.extend((host_nodes, subnet_nodes))
-            destinations.extend((subnet_nodes, host_nodes))
-        if not sources:
-            return torch.empty((2, 0), dtype=torch.long, device=membership.device)
-        return torch.stack(
-            (torch.cat(sources), torch.cat(destinations)),
-            dim=0,
-        ).long()
+    _batched_edge_index = staticmethod(batched_edge_index)
 
     def encode_nodes(
         self,

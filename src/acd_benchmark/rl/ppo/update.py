@@ -39,13 +39,15 @@ def ppo_update(policy,
         "total_loss": 0.0,
     }
     samples_processed = 0
+    cuda_logging = device.type == "cuda"
+    device_metric_sums = torch.zeros(len(metric_sums), dtype=torch.float64, device=device) if cuda_logging else None
     optimizer_steps = 0
     early_stopped = False 
 
     for _ in range(update_epochs):
         indices = torch.randperm(batch_size, device = device)
 
-        epoch_kl_sum = 0.0
+        epoch_kl_sum = torch.zeros((), dtype=torch.float64, device=device) if cuda_logging else 0.0
         epoch_samples = 0
 
         for start in range(0, batch_size, minibatch_size):
@@ -101,24 +103,29 @@ def ppo_update(policy,
                 "grad_norm": grad_norm,
                 "total_loss": total_loss,
             }
-            for name, value in values_to_log.items():
-                metric_sums[name] += (
-                    float(value.detach())
-                    * minibatch_count
-                )
+            if cuda_logging:
+                # Transfer logging scalars once per update, not every minibatch.
+                device_metric_sums += torch.stack([
+                    value.detach().double() for value in values_to_log.values()
+                ]) * minibatch_count
+            else:
+                for name, value in values_to_log.items():
+                    metric_sums[name] += float(value.detach()) * minibatch_count
 
             samples_processed += minibatch_count
             optimizer_steps += 1
             epoch_kl_sum += (
-                float(approx_kl) * minibatch_count
+                (approx_kl.detach().double() if cuda_logging else float(approx_kl)) * minibatch_count
             )
             epoch_samples += minibatch_count
 
-        mean_epoch_kl = epoch_kl_sum / epoch_samples
+        mean_epoch_kl = float(epoch_kl_sum / epoch_samples)
 
         if(target_kl is not None and mean_epoch_kl > target_kl):
             early_stopped = True
             break
+    if cuda_logging:
+        metric_sums = dict(zip(metric_sums, device_metric_sums.cpu().tolist()))
     metrics = {
         name: total / samples_processed
         for name, total in metric_sums.items()

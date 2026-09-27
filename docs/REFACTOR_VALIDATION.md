@@ -1,3 +1,10 @@
+# Historical Validation Record
+
+This records the earlier refactor, not the current main launch procedure.
+The one-off tests/refactor_parity.py script was retired during the 500k cleanup;
+commands below describe the historical validation only. Current regression tests
+and real-GPU qualification are documented in COLAB_CUDA.md.
+
 # Kiểm chứng refactor 2026-09-07
 
 ## Phạm vi

@@ -8,6 +8,7 @@ dependencies = [
     "cyborg",
     "numpy==1.26.4",
     "protobuf==4.25.3",
+    "psutil==5.9.8",
     "tensorboard==2.15.2",
     "torch==2.2.0",
     "torch-geometric==2.5.0",
