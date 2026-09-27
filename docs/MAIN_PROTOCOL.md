@@ -13,7 +13,7 @@ Protocol chi tiết: [ENCODER_RETENTION_PROTOCOL.md](ENCODER_RETENTION_PROTOCOL.
 | Training regimes | Full q=1; mixed-q uniform {1,.75,.5,.25} |
 | Masking | Persistent fixed-budget host masking sau memory update |
 | Reward/action mask | Native reward; reward scale .01 trước GAE; official mask |
-| Training seeds | 42,43,44; 18 runs |
+| Training seeds | 42,43,44,45,46; 30 runs |
 | Budget | 500000 simulator ticks danh nghĩa mỗi policy |
 | Milestones | 100k,200k,300k,400k,500k; không restart giữa các mốc |
 | Rollout | 2 CPU workers, 4 episodes/update, generator steps500 |
@@ -21,7 +21,7 @@ Protocol chi tiết: [ENCODER_RETENTION_PROTOCOL.md](ENCODER_RETENTION_PROTOCOL.
 | Evaluation | CPU copy đồng bộ; stochastic chính, greedy phụ; tách riêng từng q |
 | Validation | Seeds20000; 10 episodes/q ở milestone; periodic q=1 mỗi25 updates |
 | Final test | Seeds10000; 30 episodes/q; final checkpoint là kết quả chính |
-| Thống kê | Mean/sample std giữa 3 training seeds; báo cáo missing |
+| Thống kê | Mean/sample std giữa 5 training seeds; báo cáo missing |
 | Compute | Wall/CPU time, peak RAM, peak CUDA allocated/reserved; cùng hardware |
 
 Hyperparameters PPO, schema, reward, mask và parameter budget không thay đổi.
@@ -37,7 +37,8 @@ Số ticks thực tế cuối run dự kiến500497; dùng số trong training_s
 - Qualification Full/NoEvidence trước đây trên NodeMLP không chứng minh mọi GNN
   học dynamic evidence hay sẽ vượt NodeMLP.
 - TTR chỉ tính các lần phục hồi hoàn tất; đọc cùng unrecovered/recovery rate.
-- Chưa có exact-resume CLI đã được kiểm chứng. Không nạp weights rồi gọi là resume.
+- Resume từ latest_checkpoint.pt sau update hoàn tất; xem RESUME.md.
+  Không bảo đảm bitwise giữa các GPU; run cũ thiếu checkpoint mới không tự resume.
 - Không gộp timing M4 cũ với CUDA mới; không tuning theo final-test scores.
 - Giữ kết quả và source snapshots lịch sử trong runs/results; không đổi nhãn
   kết quả300k thành500k.
@@ -50,3 +51,10 @@ Số ticks thực tế cuối run dự kiến500497; dùng số trong training_s
 4. Báo cáo riêng encoder/regime/q, checkpoint selection và hardware metadata.
 
 Lần dọn cấu hình này không khởi chạy training.
+
+## Resume Và Log Tiến Độ
+
+Xem [RESUME.md](docs/RESUME.md). Notebook dùng RESUME=True để tiếp tục cùng run.
+latest_checkpoint.pt lưu sau mỗi PPO update và validation hoàn tất; không tiếp tục
+giữa một episode. Log mỗi50 episode ticks; PPO loss/KL in sau mỗi update.
+Run cũ không có checkpoint phục hồi mới phải giữ riêng, không tự chạy lại từ đầu.

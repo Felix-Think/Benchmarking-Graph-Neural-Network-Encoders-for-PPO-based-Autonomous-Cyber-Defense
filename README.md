@@ -4,7 +4,7 @@ Workspace nghiên cứu CAGE 4: so sánh encoder trên cùng observation, action
 PPO và ngân sách simulator ticks. Nhánh hiện tại chỉ giữ pipeline mới:
 **canonical schema v2, parser v4, structured NodeMLP/GCN/GraphSAGE**.
 
-Main benchmark: **NodeMLP/GCN/GraphSAGE x Full/mixed-q x seeds42–44**,
+Main benchmark: **NodeMLP/GCN/GraphSAGE x Full/mixed-q x seeds42–46**,
 **500k simulator ticks/policy**, lưu mốc100k/200k/300k/400k/500k.
 Cấu hình duy nhất: `configs/experiments/encoder_retention_500k_cuda.json`;
 protocol: `docs/ENCODER_RETENTION_PROTOCOL.md`.
@@ -66,7 +66,7 @@ scripts/
   training/train.py                    Một CLI cho cả ba encoder
   evaluation/evaluate.py               Final/best và các diagnostic
   analysis/summarize_main.py           Tổng hợp paired training seeds
-  experiments/run_encoder_matrix.py    Lịch 18 runs; mặc định chỉ in kế hoạch
+  experiments/run_encoder_matrix.py    Lịch 30 runs; mặc định chỉ in kế hoạch
 configs/experiments/                   Một cấu hình main 500k CPU + CUDA
 tests/                                Regression/unit/integration tests
 docs/                                 Hướng dẫn, protocol và archive
@@ -112,7 +112,7 @@ uvr python -m scripts.training.train \
 ```
 
 Đổi encoder thành gcn và **đổi run-dir** để thử GCN. CLI không ghi đè run đã có
-config.json. Không có auto-resume; dùng run mới.
+config.json. Để tiếp tục run đã có, dùng --resume; xem docs/RESUME.md.
 
 Cấu hình main: 500k ticks, generator steps500, 4 episodes/update,
 reward-scale .01, entropy .001, target KL .015, random_host, official mask,
@@ -127,7 +127,7 @@ Xem kế hoạch, chưa train:
 ```zsh
 uvr python -m scripts.experiments.run_encoder_matrix \
   --config configs/experiments/encoder_retention_500k_cuda.json \
-  --run-root runs/encoder_retention_500k_3seeds_cuda
+  --run-root runs/encoder_retention_500k_5seeds_cuda
 ```
 
 Thêm `--foreground` để chạy sau khi CUDA smoke test thành công trên NVIDIA GPU.
@@ -142,11 +142,11 @@ Chạy lại final/best bằng một file output mới:
 
 ```zsh
 uvr python -m scripts.evaluation.evaluate \
-  --run-dir runs/encoder_retention_500k_3seeds_cuda/nodemlp/full --seed 42 \
+  --run-dir runs/encoder_retention_500k_5seeds_cuda/nodemlp/full --seed 42 \
   --checkpoint final --episodes 30 --eval-seed 10000 \
-  --output runs/encoder_retention_500k_3seeds_cuda/nodemlp/full/seed_42/recheck_final.json
+  --output runs/encoder_retention_500k_5seeds_cuda/nodemlp/full/seed_42/recheck_final.json
 
-uvr tensorboard --logdir runs/encoder_retention_500k_3seeds_cuda --port 6006
+uvr tensorboard --logdir runs/encoder_retention_500k_5seeds_cuda --port 6006
 ```
 
 Mở http://localhost:6006 sau khi bạn chạy TensorBoard.
@@ -218,7 +218,7 @@ Tổng hợp ma trận hiện tại:
 
 ```zsh
 uvr python -m scripts.analysis.matrix_status \
-  --run-root runs/encoder_retention_500k_3seeds_cuda
+  --run-root runs/encoder_retention_500k_5seeds_cuda
 ```
 
 Đọc analysis_summary.json theo encoder/regime/q. Training seed là đơn vị
@@ -247,3 +247,10 @@ Observation utility đã có bằng chứng trên NodeMLP năm seeds. Điều đ
 chứng minh GCN sẽ thắng hoặc đã hội tụ. random_host không phải structural topology
 generalisation. Các curve và kết quả v1 không được đổi nhãn thành v2.
 Xem MAIN_PROTOCOL trước khi bổ sung encoder, partial-observation process hoặc claim mới.
+
+## Resume Và Log Tiến Độ
+
+Xem [RESUME.md](docs/RESUME.md). Notebook dùng RESUME=True để tiếp tục cùng run.
+latest_checkpoint.pt lưu sau mỗi PPO update và validation hoàn tất; không tiếp tục
+giữa một episode. Log mỗi50 episode ticks; PPO loss/KL in sau mỗi update.
+Run cũ không có checkpoint phục hồi mới phải giữ riêng, không tự chạy lại từ đầu.

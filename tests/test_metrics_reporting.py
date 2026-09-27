@@ -303,7 +303,7 @@ def configure_reporting_run(monkeypatch, tmp_path, *, tensorboard, fail_evaluati
         lambda *a, **kw: comparison.stochastic,
     )
 
-    def fake_train(env, policy, config, *, optimizer, on_update):
+    def fake_train(env, policy, config, *, optimizer, on_update, **kwargs):
         # Exercise reporting only; no PPO updates or simulator training.
         for metrics in result.history:
             on_update(metrics)

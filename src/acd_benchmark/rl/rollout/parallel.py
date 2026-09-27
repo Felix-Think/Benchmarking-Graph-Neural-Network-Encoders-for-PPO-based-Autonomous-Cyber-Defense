@@ -23,6 +23,7 @@ from acd_benchmark.rl.runtime import cpu_state_dict
 _ENV = None
 _POLICY = None
 _PYG_CACHE = None
+_PROGRESS_EVERY_TICKS = 0
 
 
 def make_training_env(config):
@@ -37,7 +38,8 @@ def make_training_env(config):
 
 
 def _initialize_worker(config):
-    global _ENV, _POLICY, _PYG_CACHE
+    global _ENV, _POLICY, _PYG_CACHE, _PROGRESS_EVERY_TICKS
+    _PROGRESS_EVERY_TICKS = config.get("progress_every_ticks", 0)
     os.environ["CUDA_VISIBLE_DEVICES"] = ""
     # PyG 2.5 writes generated Python modules non-atomically during construction.
     _PYG_CACHE = tempfile.TemporaryDirectory(prefix="acd-pyg-worker-")
@@ -50,7 +52,7 @@ def _initialize_worker(config):
 
 
 def _episode(payload):
-    state, seed, action_seed, gamma, gae_lambda, reward_scale = payload
+    state, seed, action_seed, gamma, gae_lambda, reward_scale, committed_ticks = payload
     _POLICY.load_state_dict(state)
     random.seed(action_seed)
     np.random.seed(action_seed)
@@ -58,6 +60,8 @@ def _episode(payload):
     batch, score, ticks = collect_rollout(
         _ENV, _POLICY, seed=seed, gamma=gamma,
         gae_lambda=gae_lambda, reward_scale=reward_scale,
+        progress_every_ticks=_PROGRESS_EVERY_TICKS,
+        committed_ticks=committed_ticks,
     )
     # NumPy payloads avoid shared-memory file-descriptor lifetime issues on macOS.
     arrays = {
@@ -102,10 +106,10 @@ class ParallelEpisodeCollector:
             initializer=_initialize_worker, initargs=({**config, "device": "cpu"},),
         )
 
-    def collect(self, policy, *, episode_seeds, action_seeds, gamma, gae_lambda, reward_scale):
+    def collect(self, policy, *, episode_seeds, action_seeds, gamma, gae_lambda, reward_scale, committed_ticks=0):
         state = cpu_state_dict(policy)
         payloads = [
-            (state, seed, action_seed, gamma, gae_lambda, reward_scale)
+            (state, seed, action_seed, gamma, gae_lambda, reward_scale, committed_ticks)
             for seed, action_seed in zip(episode_seeds, action_seeds, strict=True)
         ]
         # map preserves episode order even when workers finish out of order.

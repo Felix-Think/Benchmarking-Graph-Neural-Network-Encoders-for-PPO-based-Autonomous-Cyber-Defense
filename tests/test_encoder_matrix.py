@@ -10,13 +10,13 @@ from scripts.training.train import build_parser
 from scripts.analysis.matrix_status import read_history
 
 
-def test_matrix_contains_eighteen_matched_serial_jobs(tmp_path):
+def test_matrix_contains_thirty_matched_serial_jobs(tmp_path):
     root = Path(__file__).resolve().parents[1]
     config = json.loads((root / "configs/experiments/encoder_retention_500k_cuda.json").read_text())
     jobs = build_jobs(config, tmp_path)
-    assert len(jobs) == 18
-    assert len({row["directory"] for row in jobs}) == 18
-    assert [row["seed"] for row in jobs] == [42] * 6 + [43] * 6 + [44] * 6
+    assert len(jobs) == 30
+    assert len({row["directory"] for row in jobs}) == 30
+    assert [row["seed"] for row in jobs] == [seed for seed in range(42, 47) for _ in range(6)]
     for job in jobs:
         args = build_parser().parse_args(job["arguments"])
         assert args.total_simulator_steps == 500000

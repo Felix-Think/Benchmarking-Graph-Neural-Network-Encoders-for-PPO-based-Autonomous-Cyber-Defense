@@ -38,6 +38,7 @@ class PPOTrainingConfig:
     checkpoint_steps: tuple[int, ...] = ()
     rollout_workers: int = 1
     action_seed_protocol: str = "global"
+    progress_every_ticks: int = 0
 
 
 @dataclass
@@ -73,12 +74,17 @@ def save_training_checkpoint(
     optimizer: torch.optim.Optimizer,
     config: PPOTrainingConfig,
     result: TrainingResult,
+    extra_state: dict | None = None,
+    committed: bool = True,
 ) -> None:
     checkpoint_path = Path(path)
     checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
     temporary_path = checkpoint_path.with_suffix(".tmp")
     torch.save(
         {
+            "resume_version": 1,
+            "resume_committed": committed,
+            "extra_state": extra_state or {},
             "policy_state_dict": policy.state_dict(),
             "optimizer_state_dict": optimizer.state_dict(),
             "config": asdict(config),
@@ -152,6 +158,8 @@ def train_policy(
     on_update: UpdateCallback | None = None,
     on_milestone: Callable[[TrainingResult, int], None] | None = None,
     episode_collector=None,
+    resume_checkpoint: dict | None = None,
+    checkpoint_extra_state: dict | None = None,
 ) -> TrainingResult:
     """Train one shared policy using complete CAGE 4 episodes.
 
@@ -207,6 +215,37 @@ def train_policy(
     compute = ComputeMetrics(device)
     pending_milestones = sorted(set(config.checkpoint_steps))
 
+    if resume_checkpoint is not None:
+        saved = resume_checkpoint
+        if saved.get("resume_version") != 1 or not saved.get("resume_committed", False):
+            raise ValueError("Checkpoint lacks a committed resume boundary; not safe to resume")
+        ignored = {"checkpoint_path", "progress_every_ticks"}
+        for key, value in asdict(config).items():
+            if key not in ignored and saved["config"].get(key) != value:
+                raise ValueError(f"Resume config mismatch: {key}")
+        policy.load_state_dict(saved["policy_state_dict"])
+        optimizer.load_state_dict(saved["optimizer_state_dict"])
+        history = list(saved["history"])
+        episode_returns = list(saved["episode_returns"])
+        episode_lengths = list(saved["episode_lengths"])
+        episode_cyber_metrics = list(saved["episode_cyber_metrics"])
+        global_simulator_steps = saved["total_simulator_steps"]
+        total_policy_decisions = saved["total_policy_decisions"]
+        episode_index = saved["total_episodes"]
+        update_index = saved["total_updates"]
+        compute.load_summary(saved["compute_metrics"])
+        pending_milestones = [step for step in pending_milestones if step > global_simulator_steps]
+        rng = saved["rng_state"]
+        random.setstate(rng["python"])
+        np.random.set_state(rng["numpy"])
+        torch.random.set_rng_state(rng["torch"].cpu())
+        if device.type == "cuda":
+            if rng["cuda"] is None:
+                raise ValueError("CUDA RNG missing from checkpoint")
+            torch.cuda.set_rng_state_all([state.cpu() for state in rng["cuda"]])
+        print(f"RESUME update={update_index} committed_ticks={global_simulator_steps} "
+              f"next_episode_index={episode_index}", flush=True)
+
     def current_result():
         return TrainingResult(
             history=list(history),
@@ -219,6 +258,17 @@ def train_policy(
             episode_cyber_metrics=list(episode_cyber_metrics),
             compute_metrics=compute.summary(),
         )
+
+    def save_latest():
+        if config.checkpoint_path:
+            save_training_checkpoint(
+                Path(config.checkpoint_path).parent / "latest_checkpoint.pt",
+                policy, optimizer, config, current_result(), checkpoint_extra_state,
+            )
+
+    # Initial checkpoint makes interruption during the very first rollout recoverable.
+    if resume_checkpoint is None:
+        save_latest()
 
     while global_simulator_steps < config.total_simulator_steps:
         rollout_batches = []
@@ -240,6 +290,8 @@ def train_policy(
                         seed=config.seed + episode_index + local_index,
                         gamma=config.gamma, gae_lambda=config.gae_lambda,
                         reward_scale=config.reward_scale,
+                        progress_every_ticks=config.progress_every_ticks,
+                        committed_ticks=global_simulator_steps,
                     )
                 cyber = env.cyber_summary()
                 if independent_rng:
@@ -259,6 +311,7 @@ def train_policy(
                     action_seeds=[rollout_action_seed(config.seed, i) for i in indices],
                     gamma=config.gamma, gae_lambda=config.gae_lambda,
                     reward_scale=config.reward_scale,
+                    committed_ticks=global_simulator_steps,
                 )
 
             for batch, team_return, simulator_steps, cyber in episodes:
@@ -361,9 +414,12 @@ def train_policy(
                 Path(config.checkpoint_path).parent / "milestones"
                 / f"step_{requested_step}" / "checkpoint.pt"
             )
-            save_training_checkpoint(milestone_path, policy, optimizer, config, snapshot)
+            save_training_checkpoint(milestone_path, policy, optimizer, config, snapshot, committed=False)
             if on_milestone is not None:
                 on_milestone(snapshot, requested_step)
+
+        # Commit after callbacks: failed validation rolls back to the previous update.
+        save_latest()
 
     result = current_result()
 
@@ -374,6 +430,7 @@ def train_policy(
             optimizer=optimizer,
             config=config,
             result=result,
+            extra_state=checkpoint_extra_state,
         )
 
     return result

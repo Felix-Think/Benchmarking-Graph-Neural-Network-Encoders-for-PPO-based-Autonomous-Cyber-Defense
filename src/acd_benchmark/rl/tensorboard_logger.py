@@ -46,11 +46,13 @@ class TensorBoardLogger:
         *,
         config=None,
         flush_secs: int = 10,
+        purge_step: int | None = None,
     ):
         self.log_dir = Path(log_dir)
         self.writer = SummaryWriter(
             log_dir=str(self.log_dir),
             flush_secs=flush_secs,
+            purge_step=purge_step,
         )
         if config is not None:
             self.log_config(config)

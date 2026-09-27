@@ -1,14 +1,15 @@
 # Encoder x Observation-Retention Benchmark
 
 Protocol approved in this conversation: three encoders, two training regimes,
-three training seeds, sequential execution to 500000 simulator ticks using CPU rollout and a CUDA learner.
+five training seeds, sequential execution to 500000 simulator ticks using CPU rollout and a CUDA learner.
 
 ## Frozen Configuration
 
 The single active configuration is `configs/experiments/encoder_retention_500k_cuda.json`.
 This replaces the old 300k configurations and two-encoder launcher. Start new run
 directories; preserve historical logs/checkpoints and do not relabel them as 500k.
-No validated exact-resume CLI exists: this configuration describes new training.
+Resume the same run with --resume --foreground; see RESUME.md.
+Legacy checkpoints without a committed resume boundary are not silently migrated.
 
 | Component | Setting |
 |---|---|
@@ -22,13 +23,13 @@ No validated exact-resume CLI exists: this configuration describes new training.
 | PPO | lr3e-4, gamma0.99, lambda0.95, epochs4, minibatch64, clip0.2 |
 | PPO coefficients | value0.5, entropy0.001, grad clip0.5, target KL0.015 |
 | Update | Four complete episodes, no mid-episode cut |
-| Training seeds | 42, 43, 44, same seeds across cells |
+| Training seeds | 42, 43, 44, 45, 46, same seeds across cells |
 | Budget | 500000 nominal simulator ticks per policy, not policy decisions |
 | Runtime | CPU rollout/GAE/evaluation, CUDA FP32 PPO; one policy, two CPU workers, one Torch/BLAS thread per process |
 | Action RNG | per_episode_v1; independent from optimizer shuffling and worker scheduling |
-| Console | Every50 updates; periodic evaluation every25 updates |
+| Console | Every50 episode ticks and every PPO update; periodic evaluation every25 updates |
 
-There are18 runs, 9M nominal training ticks. Evaluation is extra compute
+There are30 runs, 15M nominal training ticks. Evaluation is extra compute
 and is not counted against the training budget. Stop on exceptions/non-finite
 metrics; never auto-tune a cell or selectively restart a poor result.
 
@@ -55,7 +56,7 @@ SeedSequence((70000, training_seed, i)). Each worker seeds Python, NumPy and Tor
 with that value. A one-worker per_episode_v1 reference saves/restores these RNG
 states around each rollout so optimizer minibatch shuffling is independent of
 rollout draws. Simulator, q and visibility RNG rules are unchanged. This protocol
-is not bitwise identical to the legacy global action RNG; all 18 new cells use
+is not bitwise identical to the legacy global action RNG; all 30 new cells use
 the same new protocol. Record action seeds in per-episode cyber metrics.
 
 Parallel budget accounting assumes the current CAGE 4 fixed episode duration
@@ -103,10 +104,12 @@ Both use the same episode seeds; q=1 reuses the existing final evaluation rather
 than running it twice. Random streams are restored around in-training evaluation.
 Paired seeds do not imply identical trajectories once actions differ.
 
-Checkpoint files include policy, optimizer, counters, history, episode metrics
-and Python/NumPy/Torch RNG states. These permit recovery work if interrupted,
-but an exact-resume CLI has NOT been implemented or validated. Continuous runs
-do not restart at milestones. Do not resume by resetting counters/seeds.
+latest_checkpoint.pt is atomically replaced after every completed update and its
+validation callbacks. It includes policy, optimizer, counters, RNGs, metrics and
+periodic/best selection state. An initial checkpoint covers the first rollout.
+Resume restores this boundary; interrupted uncommitted work is replayed.
+Milestone checkpoints saved before validation are not resumable boundaries.
+Continuous runs do not restart at milestones. See RESUME.md for limits.
 
 ## Metrics and Interpretation
 
@@ -119,7 +122,7 @@ TTR is conditional on completed recoveries; never interpret alone or turn missin
 values into0. Training additionally reports PPO stability and compute throughput.
 
 Use equal episode weight within a training seed, then sample standard deviation
-across the three training seeds. Preserve raw episodes and censored recovery
+across the five training seeds. Preserve raw episodes and censored recovery
 events. Training episodes use changing policies; pooled training summaries are
 descriptive, not final-policy evaluation scores. No untested convergence claim.
 Compute metrics include rollout/update/evaluation wall time, CPU time, sampled
@@ -135,12 +138,13 @@ Preview with:
 ```zsh
 uvr python -m scripts.experiments.run_encoder_matrix \
   --config configs/experiments/encoder_retention_500k_cuda.json \
-  --run-root runs/encoder_retention_500k_3seeds_cuda
+  --run-root runs/encoder_retention_500k_5seeds_cuda
 ```
 
 Add `--launch` to start a detached sequential queue. This saves the configuration,
 source archive, source fingerprint and current git diff before launching. Existing
-run directories are refused. The queue finishes six cells of seed42, then43, then44.
+run directories are refused unless --resume is specified. The queue finishes six
+cells per seed, in order42 through46.
 
 Each cell has console.log, config.json, training_history.jsonl, TensorBoard logs,
 checkpoint.pt, and milestones/step_N/checkpoint.pt.
@@ -157,3 +161,10 @@ Monitor only at meaningful changes: milestone, completed cell/seed, failure, or
 non-finite output. Sparse checks every hour; no detailed per-update narration.
 Never adjust parameters based on final-test scores. A protocol change after
 validation requires a new named experiment and retaining the old results.
+
+## Resume Và Log Tiến Độ
+
+Xem [RESUME.md](docs/RESUME.md). Notebook dùng RESUME=True để tiếp tục cùng run.
+latest_checkpoint.pt lưu sau mỗi PPO update và validation hoàn tất; không tiếp tục
+giữa một episode. Log mỗi50 episode ticks; PPO loss/KL in sau mỗi update.
+Run cũ không có checkpoint phục hồi mới phải giữ riêng, không tự chạy lại từ đầu.

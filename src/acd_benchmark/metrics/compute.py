@@ -14,6 +14,16 @@ class ComputeMetrics:
         self._started_at = None 
         self.stages = {}
 
+    def load_summary(self, summary):
+        """Restore completed work only; downtime/replayed work is not included."""
+        self.training_seconds = summary.get("training_seconds", 0)
+        self.simulator_ticks = summary.get("simulator_ticks", 0)
+        self.stages = {}
+        for key, value in summary.items():
+            if "/" in key:
+                stage, name = key.split("/", 1)
+                self.stages.setdefault(stage, {})[name] = value
+
     @contextmanager
     def measure(self, stage):
         with ResourceMonitor(self.device) as monitor:

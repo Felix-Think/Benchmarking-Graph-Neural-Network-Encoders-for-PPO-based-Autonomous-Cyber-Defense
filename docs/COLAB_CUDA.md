@@ -15,17 +15,12 @@
 The CPU path remains for local tests and reading old results, not as an extra benchmark condition.
 The existing 300k CPU runs are not modified or appended to.
 
-## Prepare The Upload
+## Open The Notebook
 
-From the repository on the Mac:
-
-```bash
-uvr python -m scripts.experiments.package_colab
-```
-
-Upload `dist/acd_colab_source.tar.gz` to Colab. It includes the current source,
-CybORG, tests, configs and uv.lock, not runs, checkpoints, .git or .venv.
-Open `notebooks/colab_cuda.ipynb` in Colab and execute its cells in order.
+Open notebooks/colab_cuda.ipynb on Colab. It clones GitHub at a pinned source commit;
+no source upload is needed. For a private repository, put a read-only fine-grained
+token in Colab Secrets as GITHUB_TOKEN and enable notebook access. Never paste it
+in a code cell, URL or output. The token is passed only to the clone subprocess.
 
 ## Install And Qualify
 
@@ -57,13 +52,13 @@ uv run --no-sync python -u -m scripts.experiments.run_encoder_matrix \
   --foreground
 ```
 
-Repeat with seeds 43 and 44 using different run roots. Each seed runs six
+Repeat with seeds 43, 44, 45 and 46 using different run roots. Each seed runs six
 configurations sequentially: NodeMLP/GCN/GraphSAGE x Full/mixed-q.
-Omit --seeds to run all 18 sequentially if the session can accommodate it.
+Omit --seeds to run all 30 sequentially if the session can accommodate it.
 Without --foreground or --launch, the command only prints the plan.
 
 Budget is 500k simulator ticks per policy, with validation at 100k/200k/300k/400k/500k.
-There are 18 runs (9M nominal training ticks); evaluation is additional compute.
+There are 30 runs (15M nominal training ticks); evaluation is additional compute.
 Evaluation seeds, q values, persistent masking, four episodes/update, two CPU
 workers and PPO hyperparameters remain unchanged from the prior experiment.
 The old 300k configurations and launchers have been retired; historical run
@@ -77,10 +72,11 @@ for all cells. Rollout/PPO stage timing is also reported separately.
 
 ## Interruption And Hardware
 
-Do not start all 18 cells assuming a Colab session will remain alive.
-There is no validated exact-resume CLI yet. Checkpoints can be evaluated, but
-loading only weights is not equivalent to resuming training. Do not overwrite or
-silently restart an interrupted run under its old name.
+Use RESUME=True with the same SEED, RUN_TAG, source commit and output root.
+The queue skips finished cells and restores latest_checkpoint.pt for an interrupted
+cell. It refuses changed source/config instead of silently restarting. See RESUME.md.
+Do not run two notebooks against the same root. Legacy runs without a committed
+latest checkpoint are not supported for resume.
 
 For time/resource comparisons use the same GPU model, CPU allocation, worker
 count, precision, dependencies and storage policy. Compare the runtime metadata
@@ -106,3 +102,10 @@ timing and new CUDA timing in one hardware-normalized summary.
 - [uv PyTorch integration](https://docs.astral.sh/uv/guides/integration/pytorch/)
 - [PyTorch previous-version installation](https://pytorch.org/get-started/previous-versions/)
 - [Colab resource limits and GPU availability](https://research.google.com/colaboratory/faq.html)
+
+## Resume Và Log Tiến Độ
+
+Xem [RESUME.md](docs/RESUME.md). Notebook dùng RESUME=True để tiếp tục cùng run.
+latest_checkpoint.pt lưu sau mỗi PPO update và validation hoàn tất; không tiếp tục
+giữa một episode. Log mỗi50 episode ticks; PPO loss/KL in sau mỗi update.
+Run cũ không có checkpoint phục hồi mới phải giữ riêng, không tự chạy lại từ đầu.

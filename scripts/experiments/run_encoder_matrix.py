@@ -10,6 +10,8 @@ import signal
 import subprocess
 import sys
 import tarfile
+import fcntl
+import tempfile
 
 
 REPO = Path(__file__).resolve().parents[2]
@@ -78,7 +80,19 @@ def build_jobs(config, run_root):
     return jobs
 
 
-def execute_queue(root):
+def execute_queue(root, resume=False):
+    # OS releases flock after crashes; the file's existence is not a stale lock.
+    # Drive FUSE may not implement flock; lock on this VM's local filesystem.
+    lock_name = "acd-queue-" + hashlib.sha256(str(root.resolve()).encode()).hexdigest() + ".lock"
+    with (Path(tempfile.gettempdir()) / lock_name).open("a") as lock:
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            raise RuntimeError("Another queue process is already using this run root") from None
+        return _execute_queue(root, resume)
+
+
+def _execute_queue(root, resume=False):
     manifest = json.loads((root / "manifest.json").read_text())
     state = {"status": "running", "pid": os.getpid(), "started_at": now(), "completed": []}
     write_json(root / "status.json", state)
@@ -96,6 +110,14 @@ def execute_queue(root):
             if fingerprint(source_files()) != manifest["source_sha256"]:
                 raise RuntimeError("Source changed after launch; queue stopped, not mixing code versions")
             directory = Path(job["directory"])
+            if resume and (directory / "compute_summary.json").is_file() and (directory / "evaluation_retention.json").is_file():
+                summary = json.loads((directory / "compute_summary.json").read_text())
+                json.loads((directory / "evaluation_retention.json").read_text())
+                if summary.get("status") == "completed":
+                    state["completed"].append({**job, "reused_completed_run": True})
+                    write_json(root / "status.json", state)
+                    print(f"SKIP completed {directory}", flush=True)
+                    continue
             directory.mkdir(parents=True, exist_ok=True)
             state.update(current_index=index, current=job, current_started_at=now())
             environment = {
@@ -106,7 +128,9 @@ def execute_queue(root):
             command = [
                 sys.executable, "-u", "-m", "scripts.training.train", *job["arguments"],
             ]
-            with (directory / "console.log").open("xb") as log:
+            if resume and (directory / "config.json").is_file():
+                command.append("--resume")
+            with (directory / "console.log").open("ab" if resume else "xb") as log:
                 child = subprocess.Popen(
                     command, cwd=REPO, env=environment, stdin=subprocess.DEVNULL,
                     stdout=log, stderr=subprocess.STDOUT, start_new_session=True,
@@ -150,12 +174,25 @@ def main(argv=None):
     parser.add_argument("--foreground", action="store_true", help="Run the queue in this terminal/notebook")
     parser.add_argument("--seeds", type=int, nargs="+", help="Run a subset of the configured training seeds")
     parser.add_argument("--worker", action="store_true", help=argparse.SUPPRESS)
+    parser.add_argument("--resume", action="store_true", help="Continue existing queue from committed checkpoints")
     args = parser.parse_args(argv)
     if args.launch and args.foreground:
         parser.error("Choose --launch or --foreground, not both")
     root = args.run_root.resolve()
     if args.worker:
-        return execute_queue(root)
+        return execute_queue(root, resume=args.resume)
+    if args.resume:
+        manifest = json.loads((root / "manifest.json").read_text())
+        if args.seeds is not None and args.seeds != manifest["config"]["seeds"]:
+            parser.error("--resume must use the original seed selection")
+        if fingerprint(source_files()) != manifest["source_sha256"]:
+            raise RuntimeError("Source differs from saved queue; use its source snapshot, not changed code")
+        print(f"Resume {len(manifest['jobs'])} jobs from {root}", flush=True)
+        if not (args.foreground or args.launch):
+            return 0
+        if not args.foreground:
+            parser.error("Use --resume --foreground")
+        return execute_queue(root, resume=True)
     config = json.loads(args.config.read_text())
     if args.seeds is not None:
         if len(set(args.seeds)) != len(args.seeds) or not set(args.seeds) <= set(config["seeds"]):
@@ -169,14 +206,19 @@ def main(argv=None):
     if config["training"].get("device", "cpu").startswith("cuda"):
         from acd_benchmark.rl.runtime import learner_device
         learner_device(config["training"]["device"])
+    paths = source_files()
+    # Fail before creating an output root if an uploaded source tree is incomplete.
+    for path in [*paths, REPO / "README.md", REPO / "docs/ENCODER_RETENTION_PROTOCOL.md"]:
+        if not path.is_file():
+            raise FileNotFoundError(path)
+    source_sha256 = fingerprint(paths)
     # Refuse overwrites, including a previously failed experiment queue.
     root.mkdir(parents=True, exist_ok=False)
-    paths = source_files()
     git_head = subprocess.run(
         ["git", "rev-parse", "HEAD"], cwd=REPO, capture_output=True, text=True,
     )
     manifest = {
-        "created_at": now(), "config": config, "jobs": jobs, "source_sha256": fingerprint(paths),
+        "created_at": now(), "config": config, "jobs": jobs, "source_sha256": source_sha256,
         "git_head": git_head.stdout.strip() if git_head.returncode == 0 else None,
         "python": sys.version, "max_concurrent_policies": 1,
     }

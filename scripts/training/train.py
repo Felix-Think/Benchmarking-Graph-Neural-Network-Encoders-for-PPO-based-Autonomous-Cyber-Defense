@@ -28,6 +28,7 @@ from acd_benchmark.rl.ppo.training import (
     train_policy,
 )
 from acd_benchmark.rl.tensorboard_logger import TensorBoardLogger
+from acd_benchmark.rl.ppo.resume import read_resume_checkpoint, validate_run_config, restore_outputs
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -137,6 +138,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--no-tensorboard", action="store_true")
     parser.add_argument("--log-parameter-histograms", action="store_true")
     parser.add_argument("--print-every-updates", type=int, default=25)
+    parser.add_argument("--progress-every-ticks", type=int, default=50)
+    parser.add_argument("--resume", action="store_true")
     return parser
 
 
@@ -160,7 +163,11 @@ def _print_update(metrics: dict, every_updates: int) -> None:
         f"policy_loss= {metrics['policy_loss']:.4f} "
         f"value_loss= {metrics['value_loss']:.4f} "
         f"entropy= {metrics['entropy']:.4f} "
-        f"approx_kl= {metrics['approx_kl']:.6f}"
+        f"approx_kl= {metrics['approx_kl']:.6f} "
+        f"availability={metrics.get('cyber/availability/mean')} "
+        f"compromise_burden={metrics.get('cyber/compromise_burden/mean')} "
+        f"ticks_per_second={metrics.get('compute/simulator_ticks_per_second')}",
+        flush=True,
     )
 
 
@@ -190,7 +197,15 @@ def run_training(args: argparse.Namespace) -> None:
         raise ValueError("Retention levels must lie in [0, 1]")
 
     run_dir = args.run_dir / f"seed_{args.seed}"
-    if (run_dir / "config.json").exists():
+    if args.progress_every_ticks < 0:
+        raise ValueError("--progress-every-ticks must be non-negative")
+    resume_checkpoint = None
+    previous_config = None
+    if args.resume:
+        previous_config = json.loads((run_dir / "config.json").read_text())
+        validate_run_config(previous_config, _json_ready_args(args))
+        resume_checkpoint = read_resume_checkpoint(run_dir)
+    elif (run_dir / "config.json").exists():
         raise FileExistsError(f"Run already exists: {run_dir}; choose a new --run-dir")
     run_dir.mkdir(parents=True, exist_ok=True)
     run_started = perf_counter()
@@ -218,6 +233,7 @@ def run_training(args: argparse.Namespace) -> None:
         checkpoint_steps=tuple(args.checkpoint_steps),
         rollout_workers=args.rollout_workers,
         action_seed_protocol=args.action_seed_protocol,
+        progress_every_ticks=args.progress_every_ticks,
     )
 
     seed_runtime(config.seed)
@@ -271,10 +287,21 @@ def run_training(args: argparse.Namespace) -> None:
             "mkl_num_threads": os.environ.get("MKL_NUM_THREADS"),
         },
     }
-    (run_dir / "config.json").write_text(
-        json.dumps(run_config, indent=2, sort_keys=True),
-        encoding="utf-8",
-    )
+    if previous_config is None:
+        (run_dir / "config.json").write_text(
+            json.dumps(run_config, indent=2, sort_keys=True), encoding="utf-8",
+        )
+    else:
+        if previous_config.get("runtime_seed_controls") != run_config["runtime_seed_controls"]:
+            raise ValueError("Resume requires the original PYTHONHASHSEED and thread controls")
+        # Preserve original hardware metadata; record each resumed segment separately.
+        with (run_dir / "resume_sessions.jsonl").open("a") as file:
+            file.write(json.dumps({
+                "committed_ticks": resume_checkpoint["total_simulator_steps"],
+                "compute_metadata": run_config["compute_metadata"],
+                "previous_compute_metadata": previous_config.get("compute_metadata"),
+                "note": "No cross-hardware bitwise equivalence guarantee",
+            }) + "\n")
 
     periodic_eval_env = (
         env_factory(
@@ -290,11 +317,19 @@ def run_training(args: argparse.Namespace) -> None:
     best_mean_return: float | None = None
     best_periodic_record: dict | None = None
     tensorboard_logger = None
+    checkpoint_extra_state = {}
+    if resume_checkpoint is not None:
+        checkpoint_extra_state.update(restore_outputs(run_dir, resume_checkpoint, best_checkpoint_path))
+        periodic_evaluations = list(checkpoint_extra_state.get("periodic_evaluations", []))
+        best_periodic_record = checkpoint_extra_state.get("best_periodic_record")
+        best_mean_return = best_periodic_record["mean_return"] if best_periodic_record else None
 
     if not args.no_tensorboard:
         tensorboard_logger = TensorBoardLogger(
             tensorboard_log_dir,
             config=run_config,
+            purge_step=(resume_checkpoint["total_simulator_steps"] + 1
+                        if resume_checkpoint is not None else None),
         )
 
     def on_update(metrics: dict) -> None:
@@ -352,6 +387,9 @@ def run_training(args: argparse.Namespace) -> None:
                 metric_name=(f"periodic_{args.periodic_eval_mode}_mean_return"),
                 metric_value=periodic_result.mean_return,
             )
+            checkpoint_extra_state["best_checkpoint"] = torch.load(best_checkpoint_path, map_location="cpu")
+        checkpoint_extra_state["periodic_evaluations"] = list(periodic_evaluations)
+        checkpoint_extra_state["best_periodic_record"] = best_periodic_record
 
         if tensorboard_logger is not None:
             tensorboard_logger.log_evaluation(
@@ -410,6 +448,8 @@ def run_training(args: argparse.Namespace) -> None:
             on_update=on_update,
             **({"on_milestone": on_milestone} if args.checkpoint_steps else {}),
             **({"episode_collector": episode_collector} if episode_collector is not None else {}),
+            resume_checkpoint=resume_checkpoint,
+            checkpoint_extra_state=checkpoint_extra_state,
         )
         if episode_collector is not None:
             episode_collector.close()
@@ -513,6 +553,9 @@ def run_training(args: argparse.Namespace) -> None:
 
         run_compute = {
             "status": "completed",
+            "resumed": args.resume,
+            "wall_time_scope": "current_session_only",
+            "training_compute_scope": "all_committed_updates_excluding_replayed_or_interrupted_work",
             "compute_metadata": run_config["compute_metadata"],
             "training_with_validation_seconds": training_with_validation_seconds,
             "final_evaluation_wall_seconds": perf_counter() - final_evaluation_started,

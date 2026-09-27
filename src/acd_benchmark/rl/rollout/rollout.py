@@ -126,7 +126,8 @@ class RolloutBuffer:
             returns=returns,
         )
 
-def collect_rollout(env, policy, seed, gamma=0.99, gae_lambda = 0.95, reward_scale=0.01):
+def collect_rollout(env, policy, seed, gamma=0.99, gae_lambda = 0.95, reward_scale=0.01,
+                    progress_every_ticks=0, committed_ticks=0):
     device = next(policy.parameters()).device
     observations, infos = env.reset(seed=seed)
 
@@ -226,6 +227,26 @@ def collect_rollout(env, policy, seed, gamma=0.99, gae_lambda = 0.95, reward_sca
         # Reward là team reward và giống nhau cho mọi Blue agent.
         # Không sum rewards.values(), nếu không score bị nhân số agent.
         team_return += float(rewards[reward_agent])
+
+        if progress_every_ticks > 0 and (simulator_steps % progress_every_ticks == 0 or episode_done):
+            metrics = env.cyber_summary()
+            recoveries = metrics.get("ot_recovery_events", [])
+            ttr = (sum(event["ttr_ticks"] for event in recoveries) / len(recoveries)
+                   if recoveries else None)
+            def fmt(value):
+                return "NA" if value is None else f"{value:.4f}"
+            print(
+                f"rollout episode_seed={seed} episode_tick={simulator_steps} "
+                f"committed_ticks={committed_ticks} "
+                f"reward={float(rewards[reward_agent]):.2f} return_so_far={team_return:.2f} "
+                f"availability={fmt(metrics.get('availability'))} "
+                f"compromise_burden={fmt(metrics.get('compromise_burden'))} "
+                f"compromised_hosts={metrics.get('compromised_host_count')} "
+                f"impact_successes={metrics.get('impact_successes')} "
+                f"ttr_completed={fmt(ttr)} "
+                f"unrecovered={len(metrics.get('ot_unrecovery_events', []))}",
+                flush=True,
+            )
 
         if episode_done:
             break

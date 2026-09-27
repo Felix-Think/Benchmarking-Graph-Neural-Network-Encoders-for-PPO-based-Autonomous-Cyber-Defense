@@ -1,5 +1,5 @@
 {
-  "name": "encoder_retention_500k_3seeds_cuda",
+  "name": "encoder_retention_500k_5seeds_cuda",
   "encoders": [
     "nodemlp",
     "gcn",
@@ -73,7 +73,8 @@
     "periodic_eval_seed": 20000,
     "eval_episodes": 30,
     "eval_seed": 10000,
-    "print_every_updates": 50,
+    "print_every_updates": 1,
+    "progress_every_ticks": 50,
     "rollout_workers": 2,
     "action_seed_protocol": "per_episode_v1"
   }

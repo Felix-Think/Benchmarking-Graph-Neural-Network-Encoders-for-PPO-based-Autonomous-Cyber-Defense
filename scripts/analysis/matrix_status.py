@@ -68,7 +68,8 @@ def build_report(root):
             key: {"seeds": sorted(seeds), "metrics": aggregate_seeds(seeds)}
             for key, seeds in grouped.items()
         },
-        "note": "Incomplete cells are not results; final summaries require all three seeds. Validation is separate from test.",
+        "expected_training_seeds": manifest["config"]["seeds"],
+        "note": "Incomplete cells are not results. A per-seed queue does not provide cross-seed uncertainty; combine the five planned training seeds separately. Validation is separate from test.",
     }
 
 
