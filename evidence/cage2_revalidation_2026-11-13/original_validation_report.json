@@ -1,0 +1,193 @@
+{
+  "status": "passed",
+  "checked_evaluation_files": [
+    "baselines/monitor.json",
+    "baselines/restore_op_server.json",
+    "baselines/sleep.json",
+    "baselines/analyse_user0.json",
+    "baselines/random.json",
+    "baselines/restore_round_robin.json",
+    "flat/seed_0/evaluation_greedy.json",
+    "flat/seed_0/evaluation_stochastic.json",
+    "graphsage/seed_0/evaluation_greedy.json",
+    "graphsage/seed_0/evaluation_stochastic.json",
+    "gcn/seed_0/evaluation_greedy.json",
+    "gcn/seed_0/evaluation_stochastic.json"
+  ],
+  "source_identity_unchanged": true,
+  "checkpoint_replays": [
+    {
+      "model": "flat",
+      "mode": "greedy",
+      "seed": 10000,
+      "matched": true
+    },
+    {
+      "model": "flat",
+      "mode": "stochastic",
+      "seed": 10000,
+      "matched": true
+    },
+    {
+      "model": "gcn",
+      "mode": "greedy",
+      "seed": 10000,
+      "matched": true
+    },
+    {
+      "model": "gcn",
+      "mode": "stochastic",
+      "seed": 10000,
+      "matched": true
+    },
+    {
+      "model": "graphsage",
+      "mode": "greedy",
+      "seed": 10000,
+      "matched": true
+    },
+    {
+      "model": "graphsage",
+      "mode": "stochastic",
+      "seed": 10000,
+      "matched": true
+    }
+  ],
+  "results": [
+    {
+      "model": "flat",
+      "mode": "greedy",
+      "mean_return": -961.1880000000004,
+      "evaluation_episode_sample_std": 699.5551563845751,
+      "restore_percent": 100.0,
+      "top_action": "Restore(Enterprise0)",
+      "top_action_percent": 66.03,
+      "distinct_action_targets": 4,
+      "episodes_with_target_or_action_changes": 100,
+      "zero_compromise_probe": {
+        "n": 1000,
+        "mean_total_variation": 0.164565792104695,
+        "max_total_variation": 0.2859232723712921,
+        "argmax_change_fraction": 0.851
+      }
+    },
+    {
+      "model": "flat",
+      "mode": "stochastic",
+      "mean_return": -344.5729999999999,
+      "evaluation_episode_sample_std": 116.3165837164881,
+      "restore_percent": 81.06,
+      "top_action": "Restore(Op_Server0)",
+      "top_action_percent": 25.205,
+      "distinct_action_targets": 41,
+      "episodes_with_target_or_action_changes": 100,
+      "zero_compromise_probe": {
+        "n": 1000,
+        "mean_total_variation": 0.12143196187587454,
+        "max_total_variation": 0.4858674705028534,
+        "argmax_change_fraction": 0.346
+      }
+    },
+    {
+      "model": "gcn",
+      "mode": "greedy",
+      "mean_return": -725.8969999999975,
+      "evaluation_episode_sample_std": 31.032167914190943,
+      "restore_percent": 100.0,
+      "top_action": "Restore(Op_Server0)",
+      "top_action_percent": 89.66499999999999,
+      "distinct_action_targets": 2,
+      "episodes_with_target_or_action_changes": 97,
+      "zero_compromise_probe": {
+        "n": 1000,
+        "mean_total_variation": 0.1365068574277684,
+        "max_total_variation": 0.18293555080890656,
+        "argmax_change_fraction": 0.113
+      }
+    },
+    {
+      "model": "gcn",
+      "mode": "stochastic",
+      "mean_return": -451.64899999999994,
+      "evaluation_episode_sample_std": 141.20019207286583,
+      "restore_percent": 84.745,
+      "top_action": "Restore(Op_Server0)",
+      "top_action_percent": 36.295,
+      "distinct_action_targets": 41,
+      "episodes_with_target_or_action_changes": 100,
+      "zero_compromise_probe": {
+        "n": 1000,
+        "mean_total_variation": 0.09082494541676715,
+        "max_total_variation": 0.3807098865509033,
+        "argmax_change_fraction": 0.002
+      }
+    },
+    {
+      "model": "graphsage",
+      "mode": "greedy",
+      "mean_return": -597.5809999999981,
+      "evaluation_episode_sample_std": 86.14794731897369,
+      "restore_percent": 100.0,
+      "top_action": "Restore(Enterprise2)",
+      "top_action_percent": 69.91000000000001,
+      "distinct_action_targets": 4,
+      "episodes_with_target_or_action_changes": 100,
+      "zero_compromise_probe": {
+        "n": 1000,
+        "mean_total_variation": 0.13854391926014795,
+        "max_total_variation": 0.2633495330810547,
+        "argmax_change_fraction": 0.784
+      }
+    },
+    {
+      "model": "graphsage",
+      "mode": "stochastic",
+      "mean_return": -345.4779999999999,
+      "evaluation_episode_sample_std": 125.640642414239,
+      "restore_percent": 78.19,
+      "top_action": "Restore(Op_Server0)",
+      "top_action_percent": 29.965000000000003,
+      "distinct_action_targets": 41,
+      "episodes_with_target_or_action_changes": 100,
+      "zero_compromise_probe": {
+        "n": 1000,
+        "mean_total_variation": 0.13228080176759976,
+        "max_total_variation": 0.5086857080459595,
+        "argmax_change_fraction": 0.166
+      }
+    }
+  ],
+  "sha256": {
+    "baselines/analyse_user0.json": "bedde455080107ebf6bb87de9b18ea21011ab3296040c20ca5dbb2cb15e51ab0",
+    "baselines/monitor.json": "92cc925e2436f706e6fa0089a460d241e91191165b223af84ead8b2130b5b5e3",
+    "baselines/random.json": "850123cea24e894863c1d3fc3ea8ed12125d29ce40100b7851d7dbb67846be1a",
+    "baselines/restore_op_server.json": "a122f33cd11808162c857e11ef56f9ff85097f3fe83f1bd31b75f712faca7501",
+    "baselines/restore_round_robin.json": "1c98dbcea243a4bd2ce917edbb0f048bdd05d77dcda28ce14ba6bcc3f06f1185",
+    "baselines/sleep.json": "b4185176c0fc05ff7ab54dc967d3257475f89d1003c51c8e25b4e64dc10bdafd",
+    "completed.json": "3ed80f3b360471b25effd89ec7a766d5b3d4a5e6bbed1ca12ed68c181b5e93b3",
+    "flat/seed_0/checkpoint.pt": "1d1d340340ee3b81c7c3c4b6b295326b0694f137583871d9d9b19a0090ce9a1d",
+    "flat/seed_0/evaluation_greedy.json": "b36f8888210c9de3b339ce12d23a1d28f5f72a936363b1297daeaca0dddd5da1",
+    "flat/seed_0/evaluation_greedy.probes.npz": "f8d7186336b04134beee1b2505490d2e68b96f012429fb3ab77b994c1c967771",
+    "flat/seed_0/evaluation_stochastic.json": "2e9788b048940e37b6ba6c381c93963f214e3fc19888112c9fab3f7cf073a089",
+    "flat/seed_0/evaluation_stochastic.probes.npz": "e1ece31be7ba19215303456e0275420e6315c962412f10aefbd1e0d3d5bdd698",
+    "flat/seed_0/training_history.jsonl": "a42592b90753209651413db6e193d5c79a0ee1a6163e02dfd831c45c741c5646",
+    "flat/seed_0/training_summary.json": "b59fd65dc902f999640166d0eb34afd0867c49eab8627e48fb6523200d33e8e0",
+    "gcn/seed_0/checkpoint.pt": "4b58d7948cce8c29819f5aba960001bbb7942f4a9ad89c085247e227f2978643",
+    "gcn/seed_0/evaluation_greedy.json": "8488755b077443e698063f5f609e2efce90311e1909de5b8066b8b335f7665ed",
+    "gcn/seed_0/evaluation_greedy.probes.npz": "bdfecae4c9f976a944e6344a9294b7492102ad178be492b88f47bad961efe1e1",
+    "gcn/seed_0/evaluation_stochastic.json": "8f3684f9388190a41a56d292fe361437a78a09587637aa98278bc8285c94ef9a",
+    "gcn/seed_0/evaluation_stochastic.probes.npz": "c45d728ad6799e764ab5bab791d0bae2b20e1afdcfba19e2ec174d7f7a9cccc1",
+    "gcn/seed_0/training_history.jsonl": "8f24704a781a178b02491ffe81890cfb8bad233eccc1e56ef6bda857cfb07448",
+    "gcn/seed_0/training_summary.json": "7a43bf280d9f12ddcf91041f3e35920002a86bc6ce733662ef4b9bf9018600ec",
+    "graphsage/seed_0/checkpoint.pt": "102411f559f3481b711a7428747d881fca9ede47426fc506ddfcbe2b1be8c497",
+    "graphsage/seed_0/evaluation_greedy.json": "3287eca00f1175bcdd8c85da29ab21e1e2b04c7a6fe10bdb478d992ecc176b36",
+    "graphsage/seed_0/evaluation_greedy.probes.npz": "d49ebeba80cceb676e79603fa899ff45827ab45fdc80c34f30205db51d347555",
+    "graphsage/seed_0/evaluation_stochastic.json": "70bd6f5924881516cf4cb501c99920e2278654f30edef29a337747c729d8bf4c",
+    "graphsage/seed_0/evaluation_stochastic.probes.npz": "57302dfaa9afd3ee1a4a7038f218c8ea8f07f7cf3e3dbe56f19a5372af86e2c8",
+    "graphsage/seed_0/training_history.jsonl": "2fb84021e967d9795dcf74335b3bf26580c4ab9175d32c0a8837a14f54b59cb0",
+    "graphsage/seed_0/training_summary.json": "fd260f85c5b7400d84f5632ef475256241f2ea72b91c7b4d8950b0de266c59e7",
+    "manifest.json": "dc5333591fc6d3c1aa50e6f5acc0e5e115a70155ae63133f45a19cc7f08f8476",
+    "summary.json": "76214a540d320451d5a146cd0facda194951845c99ff0d62836d98fb5cbb3936"
+  },
+  "validation_script_sha256": "454a01a5e257e3a1aca8e9e5136018a458be938008f63ec04b5195ad6c772f2e"
+}

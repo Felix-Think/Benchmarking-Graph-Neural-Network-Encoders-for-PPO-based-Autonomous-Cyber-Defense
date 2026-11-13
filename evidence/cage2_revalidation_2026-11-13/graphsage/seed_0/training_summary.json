@@ -1,0 +1,25 @@
+{
+  "config": {
+    "total_timesteps": 100000,
+    "rollout_steps": 2048,
+    "learning_rate": 0.0003,
+    "gamma": 0.99,
+    "gae_lambda": 0.95,
+    "update_epochs": 4,
+    "minibatch_size": 64,
+    "clip_coef": 0.2,
+    "value_coef": 0.5,
+    "entropy_coef": 0.01,
+    "max_grad_norm": 0.5,
+    "target_kl": null,
+    "seed": 0,
+    "device": "cpu",
+    "checkpoint_path": "{evidence}/graphsage/seed_0/checkpoint.pt"
+  },
+  "total_timesteps": 100000,
+  "updates": 49,
+  "completed_episodes": 500,
+  "wall_seconds": 214.75450300000375,
+  "timesteps_per_second": 465.64797758861545,
+  "parameter_count": 28986
+}

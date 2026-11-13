@@ -1,0 +1,9 @@
+{
+  "status": "completed",
+  "models": [
+    "flat",
+    "gcn",
+    "graphsage"
+  ],
+  "completed_at": "2026-11-13T05:20:48.208806+00:00"
+}

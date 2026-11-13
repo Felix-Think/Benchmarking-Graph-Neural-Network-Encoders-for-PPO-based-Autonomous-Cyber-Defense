@@ -1,0 +1,104 @@
+{
+  "status": "passed",
+  "verified_at": "2026-11-13T13:57:06.628825+00:00",
+  "payload_files_checked": 32,
+  "evaluation_files_checked": 12,
+  "frozen_source_verified": true,
+  "as_run_extension_verified": true,
+  "private_path_scan_passed": true,
+  "checkpoint_replays": [
+    {
+      "model": "flat",
+      "mode": "greedy",
+      "seed": 10000,
+      "matched": true
+    },
+    {
+      "model": "flat",
+      "mode": "stochastic",
+      "seed": 10000,
+      "matched": true
+    },
+    {
+      "model": "gcn",
+      "mode": "greedy",
+      "seed": 10000,
+      "matched": true
+    },
+    {
+      "model": "gcn",
+      "mode": "stochastic",
+      "seed": 10000,
+      "matched": true
+    },
+    {
+      "model": "graphsage",
+      "mode": "greedy",
+      "seed": 10000,
+      "matched": true
+    },
+    {
+      "model": "graphsage",
+      "mode": "stochastic",
+      "seed": 10000,
+      "matched": true
+    }
+  ],
+  "results": [
+    {
+      "model": "flat",
+      "mode": "greedy",
+      "mean_return": -961.1880000000004,
+      "evaluation_episode_sample_std": 699.5551563845751,
+      "restore_percent": 100.0,
+      "top_action": "Restore(Enterprise0)",
+      "top_action_percent": 66.03
+    },
+    {
+      "model": "flat",
+      "mode": "stochastic",
+      "mean_return": -344.5729999999999,
+      "evaluation_episode_sample_std": 116.3165837164881,
+      "restore_percent": 81.06,
+      "top_action": "Restore(Op_Server0)",
+      "top_action_percent": 25.205
+    },
+    {
+      "model": "gcn",
+      "mode": "greedy",
+      "mean_return": -725.8969999999975,
+      "evaluation_episode_sample_std": 31.032167914190943,
+      "restore_percent": 100.0,
+      "top_action": "Restore(Op_Server0)",
+      "top_action_percent": 89.66499999999999
+    },
+    {
+      "model": "gcn",
+      "mode": "stochastic",
+      "mean_return": -451.64899999999994,
+      "evaluation_episode_sample_std": 141.20019207286583,
+      "restore_percent": 84.745,
+      "top_action": "Restore(Op_Server0)",
+      "top_action_percent": 36.295
+    },
+    {
+      "model": "graphsage",
+      "mode": "greedy",
+      "mean_return": -597.5809999999981,
+      "evaluation_episode_sample_std": 86.14794731897369,
+      "restore_percent": 100.0,
+      "top_action": "Restore(Enterprise2)",
+      "top_action_percent": 69.91000000000001
+    },
+    {
+      "model": "graphsage",
+      "mode": "stochastic",
+      "mean_return": -345.4779999999999,
+      "evaluation_episode_sample_std": 125.640642414239,
+      "restore_percent": 78.19,
+      "top_action": "Restore(Op_Server0)",
+      "top_action_percent": 29.965000000000003
+    }
+  ],
+  "scope": "All stored evaluation summaries and observation probes; one replayed episode per model/mode, not all 100 episodes."
+}

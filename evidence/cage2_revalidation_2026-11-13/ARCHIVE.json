@@ -1,0 +1,178 @@
+{
+  "archive_version": 1,
+  "base_commit": "291977eec20c0f223b9e507ad41482bd0db268c7",
+  "original_run": "cage2_three_encoder_100k_seed0_2026-11-13",
+  "files": {
+    "baselines/analyse_user0.json": {
+      "original_name": "baselines/analyse_user0.json",
+      "original_sha256": "bedde455080107ebf6bb87de9b18ea21011ab3296040c20ca5dbb2cb15e51ab0",
+      "published_sha256": "bedde455080107ebf6bb87de9b18ea21011ab3296040c20ca5dbb2cb15e51ab0"
+    },
+    "baselines/monitor.json": {
+      "original_name": "baselines/monitor.json",
+      "original_sha256": "92cc925e2436f706e6fa0089a460d241e91191165b223af84ead8b2130b5b5e3",
+      "published_sha256": "92cc925e2436f706e6fa0089a460d241e91191165b223af84ead8b2130b5b5e3"
+    },
+    "baselines/random.json": {
+      "original_name": "baselines/random.json",
+      "original_sha256": "850123cea24e894863c1d3fc3ea8ed12125d29ce40100b7851d7dbb67846be1a",
+      "published_sha256": "850123cea24e894863c1d3fc3ea8ed12125d29ce40100b7851d7dbb67846be1a"
+    },
+    "baselines/restore_op_server.json": {
+      "original_name": "baselines/restore_op_server.json",
+      "original_sha256": "a122f33cd11808162c857e11ef56f9ff85097f3fe83f1bd31b75f712faca7501",
+      "published_sha256": "a122f33cd11808162c857e11ef56f9ff85097f3fe83f1bd31b75f712faca7501"
+    },
+    "baselines/restore_round_robin.json": {
+      "original_name": "baselines/restore_round_robin.json",
+      "original_sha256": "1c98dbcea243a4bd2ce917edbb0f048bdd05d77dcda28ce14ba6bcc3f06f1185",
+      "published_sha256": "1c98dbcea243a4bd2ce917edbb0f048bdd05d77dcda28ce14ba6bcc3f06f1185"
+    },
+    "baselines/sleep.json": {
+      "original_name": "baselines/sleep.json",
+      "original_sha256": "b4185176c0fc05ff7ab54dc967d3257475f89d1003c51c8e25b4e64dc10bdafd",
+      "published_sha256": "b4185176c0fc05ff7ab54dc967d3257475f89d1003c51c8e25b4e64dc10bdafd"
+    },
+    "completed.json": {
+      "original_name": "completed.json",
+      "original_sha256": "3ed80f3b360471b25effd89ec7a766d5b3d4a5e6bbed1ca12ed68c181b5e93b3",
+      "published_sha256": "3ed80f3b360471b25effd89ec7a766d5b3d4a5e6bbed1ca12ed68c181b5e93b3"
+    },
+    "flat/seed_0/checkpoint.pt": {
+      "original_name": "flat/seed_0/checkpoint.pt",
+      "original_sha256": "1d1d340340ee3b81c7c3c4b6b295326b0694f137583871d9d9b19a0090ce9a1d",
+      "published_sha256": "3102a3fcabe28c05c8fd765b8105169c18bc000f16552dba7cda64467e496838"
+    },
+    "flat/seed_0/evaluation_greedy.json": {
+      "original_name": "flat/seed_0/evaluation_greedy.json",
+      "original_sha256": "b36f8888210c9de3b339ce12d23a1d28f5f72a936363b1297daeaca0dddd5da1",
+      "published_sha256": "b36f8888210c9de3b339ce12d23a1d28f5f72a936363b1297daeaca0dddd5da1"
+    },
+    "flat/seed_0/evaluation_greedy.probes.npz": {
+      "original_name": "flat/seed_0/evaluation_greedy.probes.npz",
+      "original_sha256": "f8d7186336b04134beee1b2505490d2e68b96f012429fb3ab77b994c1c967771",
+      "published_sha256": "f8d7186336b04134beee1b2505490d2e68b96f012429fb3ab77b994c1c967771"
+    },
+    "flat/seed_0/evaluation_stochastic.json": {
+      "original_name": "flat/seed_0/evaluation_stochastic.json",
+      "original_sha256": "2e9788b048940e37b6ba6c381c93963f214e3fc19888112c9fab3f7cf073a089",
+      "published_sha256": "2e9788b048940e37b6ba6c381c93963f214e3fc19888112c9fab3f7cf073a089"
+    },
+    "flat/seed_0/evaluation_stochastic.probes.npz": {
+      "original_name": "flat/seed_0/evaluation_stochastic.probes.npz",
+      "original_sha256": "e1ece31be7ba19215303456e0275420e6315c962412f10aefbd1e0d3d5bdd698",
+      "published_sha256": "e1ece31be7ba19215303456e0275420e6315c962412f10aefbd1e0d3d5bdd698"
+    },
+    "flat/seed_0/training_history.jsonl": {
+      "original_name": "flat/seed_0/training_history.jsonl",
+      "original_sha256": "a42592b90753209651413db6e193d5c79a0ee1a6163e02dfd831c45c741c5646",
+      "published_sha256": "a42592b90753209651413db6e193d5c79a0ee1a6163e02dfd831c45c741c5646"
+    },
+    "flat/seed_0/training_summary.json": {
+      "original_name": "flat/seed_0/training_summary.json",
+      "original_sha256": "b59fd65dc902f999640166d0eb34afd0867c49eab8627e48fb6523200d33e8e0",
+      "published_sha256": "c871e5732fd4e4bb544d5bd2f979e8f1e4aea71739fcc6a4549f60c3de57c4be"
+    },
+    "gcn/seed_0/checkpoint.pt": {
+      "original_name": "gcn/seed_0/checkpoint.pt",
+      "original_sha256": "4b58d7948cce8c29819f5aba960001bbb7942f4a9ad89c085247e227f2978643",
+      "published_sha256": "a3f828a1e51da93a4d8d2f444094b787240682f32adee729140c1047add7fc3f"
+    },
+    "gcn/seed_0/evaluation_greedy.json": {
+      "original_name": "gcn/seed_0/evaluation_greedy.json",
+      "original_sha256": "8488755b077443e698063f5f609e2efce90311e1909de5b8066b8b335f7665ed",
+      "published_sha256": "8488755b077443e698063f5f609e2efce90311e1909de5b8066b8b335f7665ed"
+    },
+    "gcn/seed_0/evaluation_greedy.probes.npz": {
+      "original_name": "gcn/seed_0/evaluation_greedy.probes.npz",
+      "original_sha256": "bdfecae4c9f976a944e6344a9294b7492102ad178be492b88f47bad961efe1e1",
+      "published_sha256": "bdfecae4c9f976a944e6344a9294b7492102ad178be492b88f47bad961efe1e1"
+    },
+    "gcn/seed_0/evaluation_stochastic.json": {
+      "original_name": "gcn/seed_0/evaluation_stochastic.json",
+      "original_sha256": "8f3684f9388190a41a56d292fe361437a78a09587637aa98278bc8285c94ef9a",
+      "published_sha256": "8f3684f9388190a41a56d292fe361437a78a09587637aa98278bc8285c94ef9a"
+    },
+    "gcn/seed_0/evaluation_stochastic.probes.npz": {
+      "original_name": "gcn/seed_0/evaluation_stochastic.probes.npz",
+      "original_sha256": "c45d728ad6799e764ab5bab791d0bae2b20e1afdcfba19e2ec174d7f7a9cccc1",
+      "published_sha256": "c45d728ad6799e764ab5bab791d0bae2b20e1afdcfba19e2ec174d7f7a9cccc1"
+    },
+    "gcn/seed_0/training_history.jsonl": {
+      "original_name": "gcn/seed_0/training_history.jsonl",
+      "original_sha256": "8f24704a781a178b02491ffe81890cfb8bad233eccc1e56ef6bda857cfb07448",
+      "published_sha256": "8f24704a781a178b02491ffe81890cfb8bad233eccc1e56ef6bda857cfb07448"
+    },
+    "gcn/seed_0/training_summary.json": {
+      "original_name": "gcn/seed_0/training_summary.json",
+      "original_sha256": "7a43bf280d9f12ddcf91041f3e35920002a86bc6ce733662ef4b9bf9018600ec",
+      "published_sha256": "0c0eaa9cfc6a78ddadfb6306c670da65d3770cf74b1151eedf7b92f75812fdce"
+    },
+    "graphsage/seed_0/checkpoint.pt": {
+      "original_name": "graphsage/seed_0/checkpoint.pt",
+      "original_sha256": "102411f559f3481b711a7428747d881fca9ede47426fc506ddfcbe2b1be8c497",
+      "published_sha256": "33015329181fabf1acbf4e9b3fa3804dbb413c069af65a9ed393b649a415d310"
+    },
+    "graphsage/seed_0/evaluation_greedy.json": {
+      "original_name": "graphsage/seed_0/evaluation_greedy.json",
+      "original_sha256": "3287eca00f1175bcdd8c85da29ab21e1e2b04c7a6fe10bdb478d992ecc176b36",
+      "published_sha256": "3287eca00f1175bcdd8c85da29ab21e1e2b04c7a6fe10bdb478d992ecc176b36"
+    },
+    "graphsage/seed_0/evaluation_greedy.probes.npz": {
+      "original_name": "graphsage/seed_0/evaluation_greedy.probes.npz",
+      "original_sha256": "d49ebeba80cceb676e79603fa899ff45827ab45fdc80c34f30205db51d347555",
+      "published_sha256": "d49ebeba80cceb676e79603fa899ff45827ab45fdc80c34f30205db51d347555"
+    },
+    "graphsage/seed_0/evaluation_stochastic.json": {
+      "original_name": "graphsage/seed_0/evaluation_stochastic.json",
+      "original_sha256": "70bd6f5924881516cf4cb501c99920e2278654f30edef29a337747c729d8bf4c",
+      "published_sha256": "70bd6f5924881516cf4cb501c99920e2278654f30edef29a337747c729d8bf4c"
+    },
+    "graphsage/seed_0/evaluation_stochastic.probes.npz": {
+      "original_name": "graphsage/seed_0/evaluation_stochastic.probes.npz",
+      "original_sha256": "57302dfaa9afd3ee1a4a7038f218c8ea8f07f7cf3e3dbe56f19a5372af86e2c8",
+      "published_sha256": "57302dfaa9afd3ee1a4a7038f218c8ea8f07f7cf3e3dbe56f19a5372af86e2c8"
+    },
+    "graphsage/seed_0/training_history.jsonl": {
+      "original_name": "graphsage/seed_0/training_history.jsonl",
+      "original_sha256": "2fb84021e967d9795dcf74335b3bf26580c4ab9175d32c0a8837a14f54b59cb0",
+      "published_sha256": "2fb84021e967d9795dcf74335b3bf26580c4ab9175d32c0a8837a14f54b59cb0"
+    },
+    "graphsage/seed_0/training_summary.json": {
+      "original_name": "graphsage/seed_0/training_summary.json",
+      "original_sha256": "fd260f85c5b7400d84f5632ef475256241f2ea72b91c7b4d8950b0de266c59e7",
+      "published_sha256": "26134bf7684e285a480a05697318230d32bcbfb49343530194f8f5f5cecb5eea"
+    },
+    "manifest.json": {
+      "original_name": "manifest.json",
+      "original_sha256": "dc5333591fc6d3c1aa50e6f5acc0e5e115a70155ae63133f45a19cc7f08f8476",
+      "published_sha256": "6711e684f5bfc8b146520971a7ea8e393151fac975e00b2c8820ea2d83c06272"
+    },
+    "summary.json": {
+      "original_name": "summary.json",
+      "original_sha256": "76214a540d320451d5a146cd0facda194951845c99ff0d62836d98fb5cbb3936",
+      "published_sha256": "76214a540d320451d5a146cd0facda194951845c99ff0d62836d98fb5cbb3936"
+    },
+    "original_validate_results.py": {
+      "original_name": "validate_results.py",
+      "original_sha256": "454a01a5e257e3a1aca8e9e5136018a458be938008f63ec04b5195ad6c772f2e",
+      "published_sha256": "454a01a5e257e3a1aca8e9e5136018a458be938008f63ec04b5195ad6c772f2e"
+    },
+    "original_validation_report.json": {
+      "original_name": "validation_report.json",
+      "original_sha256": "58f36818bb537acfb08e73111e0958822ff6e66f09668bf8ad8a90824619f47c",
+      "published_sha256": "58f36818bb537acfb08e73111e0958822ff6e66f09668bf8ad8a90824619f47c"
+    }
+  },
+  "path_metadata_normalized": [
+    "flat/seed_0/checkpoint.pt",
+    "flat/seed_0/training_summary.json",
+    "gcn/seed_0/checkpoint.pt",
+    "gcn/seed_0/training_summary.json",
+    "graphsage/seed_0/checkpoint.pt",
+    "graphsage/seed_0/training_summary.json",
+    "manifest.json"
+  ],
+  "normalization": "Only repository/run path strings are replaced by {repo}/{evidence} tokens. Checkpoint tensors, optimizer state, metrics, and probe arrays are unchanged.",
+  "original_validation_report": "original_validation_report.json"
+}
